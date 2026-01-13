@@ -5,22 +5,34 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, RefreshCw, FileText } from 'lucide-react';
+import { ArrowRight, RefreshCw, FileText, CalendarIcon } from 'lucide-react';
 import { InvoicePreview } from './InvoicePreview';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export const CreateInvoiceForm = () => {
+  const { user } = useAuth();
   const [clientName, setClientName] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<'USD' | 'PKR'>('USD');
+  const [status, setStatus] = useState<'draft' | 'sent' | 'paid'>('draft');
+  const [invoiceDate, setInvoiceDate] = useState<Date>(new Date());
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { createInvoice, getConversionRate } = useInvoices();
   const navigate = useNavigate();
   const conversionRate = getConversionRate();
+  
+  const senderName = user?.displayName || user?.email?.split('@')[0] || 'Your Name';
 
   const calculateConversion = () => {
     const numAmount = parseFloat(amount) || 0;
@@ -34,18 +46,27 @@ export const CreateInvoiceForm = () => {
     e.preventDefault();
     
     if (!clientName || !serviceDescription || !amount) {
-      toast.error('Please fill in all fields');
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (!dueDate) {
+      toast.error('Please select a due date');
       return;
     }
 
     setIsSubmitting(true);
     
-    const invoice = createInvoice({
+    const invoice = await createInvoice({
       clientName,
       serviceDescription,
       amount: parseFloat(amount),
       currency,
-      status: 'draft',
+      status,
+      invoiceDate: invoiceDate.toISOString(),
+      dueDate: dueDate.toISOString(),
+      senderName,
+      notes: notes || undefined,
     });
 
     if (invoice) {
@@ -67,9 +88,20 @@ export const CreateInvoiceForm = () => {
           <CardDescription>Fill in the details to generate a professional invoice</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Sender Name (Read-only) */}
             <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name</Label>
+              <Label htmlFor="senderName">From (Sender)</Label>
+              <Input
+                id="senderName"
+                value={senderName}
+                disabled
+                className="bg-muted border-border"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="clientName">Client Name *</Label>
               <Input
                 id="clientName"
                 value={clientName}
@@ -79,21 +111,93 @@ export const CreateInvoiceForm = () => {
               />
             </div>
 
+            {/* Date Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Invoice Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-background border-border",
+                        !invoiceDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {invoiceDate ? format(invoiceDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={invoiceDate}
+                      onSelect={(date) => date && setInvoiceDate(date)}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Due Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-background border-border",
+                        !dueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Status Selector */}
             <div className="space-y-2">
-              <Label htmlFor="serviceDescription">Service Description</Label>
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as 'draft' | 'sent' | 'paid')}>
+                <SelectTrigger className="bg-background border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="serviceDescription">Service Description *</Label>
               <Textarea
                 id="serviceDescription"
                 value={serviceDescription}
                 onChange={(e) => setServiceDescription(e.target.value)}
                 placeholder="Describe the services provided..."
-                rows={4}
+                rows={3}
                 className="bg-background border-border resize-none"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
+                <Label htmlFor="amount">Amount *</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -138,6 +242,19 @@ export const CreateInvoiceForm = () => {
               </div>
             )}
 
+            {/* Notes Field */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes / Payment Instructions (Optional)</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add payment instructions or additional notes..."
+                rows={2}
+                className="bg-background border-border resize-none"
+              />
+            </div>
+
             <Button 
               type="submit" 
               size="lg" 
@@ -162,6 +279,11 @@ export const CreateInvoiceForm = () => {
           amount={parseFloat(amount) || 0}
           currency={currency}
           conversionRate={conversionRate}
+          status={status}
+          invoiceDate={invoiceDate}
+          dueDate={dueDate}
+          senderName={senderName}
+          notes={notes}
         />
       </div>
     </div>

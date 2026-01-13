@@ -10,4 +10,8 @@ export interface Invoice {
   status: 'draft' | 'sent' | 'paid';
   createdAt: string;
   invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  senderName: string;
+  notes?: string;
 }

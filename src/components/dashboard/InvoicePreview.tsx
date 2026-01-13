@@ -8,7 +8,10 @@ interface InvoicePreviewProps {
   conversionRate: number;
   invoiceNumber?: string;
   status?: 'draft' | 'sent' | 'paid';
-  createdAt?: Date;
+  invoiceDate?: Date;
+  dueDate?: Date;
+  senderName?: string;
+  notes?: string;
 }
 
 export const InvoicePreview = ({
@@ -19,7 +22,10 @@ export const InvoicePreview = ({
   conversionRate,
   invoiceNumber = 'INV-PREVIEW',
   status = 'draft',
-  createdAt = new Date(),
+  invoiceDate = new Date(),
+  dueDate,
+  senderName = 'Your Name',
+  notes,
 }: InvoicePreviewProps) => {
   const formatCurrency = (value: number, curr: string) => {
     return new Intl.NumberFormat('en-PK', {
@@ -44,92 +50,109 @@ export const InvoicePreview = ({
   };
 
   return (
-    <div className="bg-white text-slate-900 p-8 rounded-lg shadow-lg border border-slate-200 min-h-[600px]">
+    <div className="bg-white text-slate-900 p-6 rounded-lg shadow-lg border border-slate-200 min-h-[500px] text-sm">
       {/* Header */}
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-3">
         <div>
-          <h1 className="text-2xl font-bold text-orange-500">InvoicePK</h1>
-          <p className="text-sm text-slate-500">Professional Invoice Management</p>
+          <h1 className="text-xl font-bold text-orange-500">InvoicePK</h1>
+          <p className="text-xs text-slate-500">Professional Invoice Management</p>
         </div>
-        <h2 className="text-3xl font-bold text-slate-900">INVOICE</h2>
+        <h2 className="text-2xl font-bold text-slate-900">INVOICE</h2>
       </div>
       
       {/* Accent Line */}
-      <div className="h-0.5 bg-orange-500 mb-6" />
+      <div className="h-0.5 bg-orange-500 mb-4" />
       
       {/* Invoice Details */}
-      <div className="flex justify-between mb-2 text-sm">
+      <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
         <div>
-          <span className="text-slate-500">Invoice Number: </span>
+          <span className="text-slate-500">Invoice #: </span>
           <span className="font-semibold">{invoiceNumber}</span>
         </div>
+        <div className="text-right">
+          <span className="text-slate-500">Invoice Date: </span>
+          <span className="font-semibold">{format(invoiceDate, 'MMM dd, yyyy')}</span>
+        </div>
         <div>
-          <span className="text-slate-500">Date: </span>
-          <span className="font-semibold">{format(createdAt, 'MMM dd, yyyy')}</span>
+          <span className="text-slate-500">Status: </span>
+          <span className={`font-semibold capitalize ${getStatusColor()}`}>{status}</span>
+        </div>
+        <div className="text-right">
+          <span className="text-slate-500">Due Date: </span>
+          <span className="font-semibold">{dueDate ? format(dueDate, 'MMM dd, yyyy') : '--'}</span>
         </div>
       </div>
       
-      <div className="text-sm mb-6">
-        <span className="text-slate-500">Status: </span>
-        <span className={`font-semibold capitalize ${getStatusColor()}`}>{status}</span>
-      </div>
-      
-      {/* Bill To Section */}
-      <div className="bg-slate-50 rounded-lg p-4 mb-6">
-        <p className="text-xs font-bold text-orange-500 mb-2">BILL TO</p>
-        <p className="text-lg font-bold text-slate-900">
-          {clientName || <span className="text-slate-400 italic">Client name...</span>}
-        </p>
+      {/* From & Bill To Section */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-slate-50 rounded-lg p-3">
+          <p className="text-xs font-bold text-orange-500 mb-1">FROM</p>
+          <p className="text-sm font-bold text-slate-900">
+            {senderName || <span className="text-slate-400 italic">Sender name...</span>}
+          </p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-3">
+          <p className="text-xs font-bold text-orange-500 mb-1">BILL TO</p>
+          <p className="text-sm font-bold text-slate-900">
+            {clientName || <span className="text-slate-400 italic">Client name...</span>}
+          </p>
+        </div>
       </div>
       
       {/* Service Description */}
-      <div className="mb-6">
-        <p className="text-xs font-bold text-orange-500 mb-2">SERVICE DESCRIPTION</p>
-        <div className="h-px bg-slate-200 mb-3" />
-        <p className="text-slate-700 whitespace-pre-wrap">
+      <div className="mb-4">
+        <p className="text-xs font-bold text-orange-500 mb-1">SERVICE DESCRIPTION</p>
+        <div className="h-px bg-slate-200 mb-2" />
+        <p className="text-slate-700 whitespace-pre-wrap text-xs leading-relaxed">
           {serviceDescription || <span className="text-slate-400 italic">Service description...</span>}
         </p>
       </div>
       
       {/* Amount Section */}
-      <div className="h-px bg-slate-200 mb-4" />
+      <div className="h-px bg-slate-200 mb-3" />
       
-      <div className="bg-slate-50 rounded-lg p-4 mb-4">
-        {/* Original Amount */}
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-sm text-slate-500">Amount ({currency})</span>
-          <span className="text-lg font-bold text-slate-900">
+      <div className="bg-slate-50 rounded-lg p-3 mb-3 text-xs">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-slate-500">Amount ({currency})</span>
+          <span className="text-sm font-bold text-slate-900">
             {amount > 0 ? formatCurrency(amount, currency) : '--'}
           </span>
         </div>
         
-        {/* Conversion Rate */}
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-sm text-slate-500">Conversion Rate</span>
-          <span className="text-sm text-slate-700">1 USD = {conversionRate.toFixed(2)} PKR</span>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-slate-500">Conversion Rate</span>
+          <span className="text-slate-700">1 USD = {conversionRate.toFixed(2)} PKR</span>
         </div>
         
-        {/* Converted Amount */}
         <div className="flex justify-between items-center">
-          <span className="text-sm text-slate-500">Converted Amount ({convertedCurrency})</span>
-          <span className="text-lg font-bold text-orange-500">
+          <span className="text-slate-500">Converted Amount ({convertedCurrency})</span>
+          <span className="text-sm font-bold text-orange-500">
             {amount > 0 ? formatCurrency(convertedAmount, convertedCurrency) : '--'}
           </span>
         </div>
       </div>
       
       {/* Total */}
-      <div className="bg-orange-500 text-white rounded-lg p-4 flex justify-between items-center mb-6">
-        <span className="font-bold">TOTAL AMOUNT</span>
-        <span className="text-xl font-bold">
+      <div className="bg-orange-500 text-white rounded-lg p-3 flex justify-between items-center mb-4">
+        <span className="font-bold text-sm">TOTAL AMOUNT</span>
+        <span className="text-lg font-bold">
           {amount > 0 ? formatCurrency(amount, currency) : '--'}
         </span>
       </div>
       
+      {/* Notes Section */}
+      {notes && (
+        <div className="mb-4">
+          <p className="text-xs font-bold text-orange-500 mb-1">NOTES</p>
+          <div className="h-px bg-slate-200 mb-2" />
+          <p className="text-xs text-slate-600 whitespace-pre-wrap">{notes}</p>
+        </div>
+      )}
+      
       {/* Footer */}
-      <div className="h-px bg-slate-200 mb-4" />
+      <div className="h-px bg-slate-200 mb-3" />
       <div className="text-center">
-        <p className="text-sm text-slate-500 mb-1">Thank you for your business!</p>
+        <p className="text-xs text-slate-500 mb-1">Thank you for your business!</p>
         <p className="text-xs text-slate-400">Generated by InvoicePK</p>
       </div>
     </div>

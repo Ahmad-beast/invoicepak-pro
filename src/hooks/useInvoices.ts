@@ -74,6 +74,10 @@ export const useInvoices = () => {
         invoiceNumber: generateInvoiceNumber(),
         convertedAmount: Math.round(convertedAmount * 100) / 100,
         conversionRate: USD_TO_PKR_RATE,
+        invoiceDate: data.invoiceDate || new Date().toISOString(),
+        dueDate: data.dueDate || new Date().toISOString(),
+        senderName: data.senderName || '',
+        notes: data.notes || '',
       });
 
       return { id: docRef.id };
