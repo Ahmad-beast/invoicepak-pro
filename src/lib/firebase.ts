@@ -1,16 +1,17 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // Replace with your Firebase project configuration
 // Get these values from Firebase Console > Project Settings > Your apps
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDrz0HMVDphgu9c9jWEOlha83fMZW-lwyc",
+  authDomain: "invoicepk-2fcfa.firebaseapp.com",
+  projectId: "invoicepk-2fcfa",
+  storageBucket: "invoicepk-2fcfa.firebasestorage.app",
+  messagingSenderId: "952507478876",
+  appId: "1:952507478876:web:33bf93827c1eefabb14799",
+  measurementId: "G-VXGH01QX8P",
 };
 
 const app = initializeApp(firebaseConfig);
