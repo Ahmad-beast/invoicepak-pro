@@ -39,7 +39,15 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
     try {
       // Small delay to show loading state
       await new Promise(resolve => setTimeout(resolve, 300));
-      generateInvoicePDF(invoice);
+      // Ensure backward compatibility for invoices without new fields
+      const completeInvoice: Invoice = {
+        ...invoice,
+        invoiceDate: invoice.invoiceDate || invoice.createdAt,
+        dueDate: invoice.dueDate || invoice.createdAt,
+        senderName: invoice.senderName || 'InvoicePK User',
+        notes: invoice.notes || '',
+      };
+      generateInvoicePDF(completeInvoice);
     } finally {
       setDownloadingId(null);
     }

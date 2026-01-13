@@ -3,9 +3,15 @@ import { Invoice } from '@/types/invoice';
 import { format } from 'date-fns';
 
 export const generateInvoicePDF = (invoice: Invoice): void => {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
+  // A5 size: 148mm x 210mm
+  const doc = new jsPDF({
+    format: 'a5',
+    unit: 'mm',
+  });
+  
+  const pageWidth = doc.internal.pageSize.getWidth(); // 148mm
+  const pageHeight = doc.internal.pageSize.getHeight(); // 210mm
+  const margin = 12;
   const contentWidth = pageWidth - margin * 2;
   
   // Colors
@@ -28,7 +34,7 @@ export const generateInvoicePDF = (invoice: Invoice): void => {
       align?: 'left' | 'center' | 'right';
     }
   ) => {
-    const { fontSize = 10, color = darkText, fontStyle = 'normal', align = 'left' } = options || {};
+    const { fontSize = 8, color = darkText, fontStyle = 'normal', align = 'left' } = options || {};
     doc.setFontSize(fontSize);
     doc.setTextColor(...color);
     doc.setFont('helvetica', fontStyle);
@@ -45,7 +51,7 @@ export const generateInvoicePDF = (invoice: Invoice): void => {
   
   const addLine = (y: number, color: [number, number, number] = lightGray) => {
     doc.setDrawColor(...color);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(0.3);
     doc.line(margin, y, pageWidth - margin, y);
   };
   
@@ -60,177 +66,203 @@ export const generateInvoicePDF = (invoice: Invoice): void => {
   
   // Header - InvoicePK Branding
   addText('InvoicePK', margin, yPosition, { 
-    fontSize: 24, 
+    fontSize: 16, 
     color: accentColor, 
     fontStyle: 'bold' 
   });
   
   addText('INVOICE', pageWidth - margin, yPosition, { 
-    fontSize: 28, 
+    fontSize: 18, 
     color: darkText, 
     fontStyle: 'bold',
     align: 'right'
   });
   
-  yPosition += 15;
+  yPosition += 6;
   
   addText('Professional Invoice Management', margin, yPosition, { 
-    fontSize: 10, 
+    fontSize: 7, 
     color: grayText 
   });
+  
+  yPosition += 3;
+  addLine(yPosition, accentColor);
+  yPosition += 8;
+  
+  // Invoice Details Section - 2 column layout
+  const leftCol = margin;
+  const rightCol = pageWidth / 2 + 5;
+  
+  addText('Invoice #:', leftCol, yPosition, { fontSize: 7, color: grayText });
+  addText(invoice.invoiceNumber, leftCol + 20, yPosition, { fontSize: 7, fontStyle: 'bold' });
+  
+  addText('Invoice Date:', rightCol, yPosition, { fontSize: 7, color: grayText });
+  addText(format(new Date(invoice.invoiceDate), 'MMM dd, yyyy'), rightCol + 22, yPosition, { fontSize: 7, fontStyle: 'bold' });
   
   yPosition += 5;
-  addLine(yPosition, accentColor);
-  yPosition += 15;
   
-  // Invoice Details Section
-  addText('Invoice Number:', margin, yPosition, { 
-    fontSize: 10, 
-    color: grayText 
+  addText('Status:', leftCol, yPosition, { fontSize: 7, color: grayText });
+  addText(invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1), leftCol + 20, yPosition, { 
+    fontSize: 7, 
+    fontStyle: 'bold',
+    color: invoice.status === 'paid' ? [34, 197, 94] : invoice.status === 'sent' ? [59, 130, 246] : grayText
   });
-  addText(invoice.invoiceNumber, margin + 35, yPosition, { 
-    fontSize: 10, 
+  
+  addText('Due Date:', rightCol, yPosition, { fontSize: 7, color: grayText });
+  addText(format(new Date(invoice.dueDate), 'MMM dd, yyyy'), rightCol + 22, yPosition, { fontSize: 7, fontStyle: 'bold' });
+  
+  yPosition += 10;
+  
+  // From & Bill To Section - Side by side
+  const boxHeight = 18;
+  const boxWidth = (contentWidth - 4) / 2;
+  
+  // From box
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, yPosition - 3, boxWidth, boxHeight, 2, 2, 'F');
+  
+  addText('FROM', margin + 4, yPosition + 2, { 
+    fontSize: 7, 
+    color: accentColor, 
+    fontStyle: 'bold' 
+  });
+  addText(invoice.senderName || 'Sender', margin + 4, yPosition + 8, { 
+    fontSize: 9, 
     fontStyle: 'bold' 
   });
   
-  addText('Date:', pageWidth - margin - 50, yPosition, { 
-    fontSize: 10, 
+  // Bill To box
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin + boxWidth + 4, yPosition - 3, boxWidth, boxHeight, 2, 2, 'F');
+  
+  addText('BILL TO', margin + boxWidth + 8, yPosition + 2, { 
+    fontSize: 7, 
+    color: accentColor, 
+    fontStyle: 'bold' 
+  });
+  addText(invoice.clientName, margin + boxWidth + 8, yPosition + 8, { 
+    fontSize: 9, 
+    fontStyle: 'bold' 
+  });
+  
+  yPosition += boxHeight + 6;
+  
+  // Service Description Section
+  addText('SERVICE DESCRIPTION', margin, yPosition, { 
+    fontSize: 7, 
+    color: accentColor, 
+    fontStyle: 'bold' 
+  });
+  
+  yPosition += 4;
+  addLine(yPosition - 1);
+  yPosition += 3;
+  
+  // Handle long descriptions with text wrapping
+  doc.setFontSize(8);
+  doc.setTextColor(...darkText);
+  doc.setFont('helvetica', 'normal');
+  const splitDescription = doc.splitTextToSize(invoice.serviceDescription, contentWidth);
+  const maxLines = 4; // Limit lines to keep A5 compact
+  const truncatedDescription = splitDescription.slice(0, maxLines);
+  doc.text(truncatedDescription, margin, yPosition);
+  yPosition += truncatedDescription.length * 4 + 8;
+  
+  // Amount Section
+  addLine(yPosition);
+  yPosition += 6;
+  
+  // Amount breakdown box
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, yPosition - 3, contentWidth, 32, 2, 2, 'F');
+  
+  // Original Amount
+  addText('Amount (' + invoice.currency + ')', margin + 4, yPosition + 3, { 
+    fontSize: 7, 
     color: grayText 
   });
-  addText(format(new Date(invoice.createdAt), 'MMM dd, yyyy'), pageWidth - margin, yPosition, { 
+  addText(formatCurrency(invoice.amount, invoice.currency), pageWidth - margin - 4, yPosition + 3, { 
     fontSize: 10, 
     fontStyle: 'bold',
+    align: 'right'
+  });
+  
+  yPosition += 10;
+  
+  // Conversion Rate
+  addText('Conversion Rate', margin + 4, yPosition, { 
+    fontSize: 7, 
+    color: grayText 
+  });
+  addText(`1 USD = ${invoice.conversionRate.toFixed(2)} PKR`, pageWidth - margin - 4, yPosition, { 
+    fontSize: 7,
     align: 'right'
   });
   
   yPosition += 8;
   
-  addText('Status:', margin, yPosition, { 
-    fontSize: 10, 
-    color: grayText 
-  });
-  addText(invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1), margin + 35, yPosition, { 
-    fontSize: 10, 
-    fontStyle: 'bold',
-    color: invoice.status === 'paid' ? [34, 197, 94] : invoice.status === 'sent' ? [59, 130, 246] : grayText
-  });
-  
-  yPosition += 20;
-  
-  // Bill To Section
-  doc.setFillColor(248, 250, 252); // Very light gray background
-  doc.roundedRect(margin, yPosition - 5, contentWidth, 35, 3, 3, 'F');
-  
-  addText('BILL TO', margin + 10, yPosition + 5, { 
-    fontSize: 10, 
-    color: accentColor, 
-    fontStyle: 'bold' 
-  });
-  
-  yPosition += 15;
-  
-  addText(invoice.clientName, margin + 10, yPosition, { 
-    fontSize: 14, 
-    fontStyle: 'bold' 
-  });
-  
-  yPosition += 30;
-  
-  // Service Description Section
-  addText('SERVICE DESCRIPTION', margin, yPosition, { 
-    fontSize: 10, 
-    color: accentColor, 
-    fontStyle: 'bold' 
-  });
-  
-  yPosition += 10;
-  addLine(yPosition - 3);
-  yPosition += 5;
-  
-  // Handle long descriptions with text wrapping
-  doc.setFontSize(11);
-  doc.setTextColor(...darkText);
-  doc.setFont('helvetica', 'normal');
-  const splitDescription = doc.splitTextToSize(invoice.serviceDescription, contentWidth);
-  doc.text(splitDescription, margin, yPosition);
-  yPosition += splitDescription.length * 6 + 15;
-  
-  // Amount Section
-  addLine(yPosition);
-  yPosition += 15;
-  
-  // Amount breakdown box
-  doc.setFillColor(248, 250, 252);
-  doc.roundedRect(margin, yPosition - 5, contentWidth, 60, 3, 3, 'F');
-  
-  // Original Amount
-  addText('Amount (' + invoice.currency + ')', margin + 10, yPosition + 8, { 
-    fontSize: 10, 
-    color: grayText 
-  });
-  addText(formatCurrency(invoice.amount, invoice.currency), pageWidth - margin - 10, yPosition + 8, { 
-    fontSize: 14, 
-    fontStyle: 'bold',
-    align: 'right'
-  });
-  
-  yPosition += 18;
-  
-  // Conversion Rate
-  addText('Conversion Rate', margin + 10, yPosition, { 
-    fontSize: 10, 
-    color: grayText 
-  });
-  addText(`1 USD = ${invoice.conversionRate.toFixed(2)} PKR`, pageWidth - margin - 10, yPosition, { 
-    fontSize: 10,
-    align: 'right'
-  });
-  
-  yPosition += 12;
-  
   // Converted Amount
   const convertedCurrency = invoice.currency === 'USD' ? 'PKR' : 'USD';
-  addText(`Converted Amount (${convertedCurrency})`, margin + 10, yPosition, { 
-    fontSize: 10, 
+  addText(`Converted Amount (${convertedCurrency})`, margin + 4, yPosition, { 
+    fontSize: 7, 
     color: grayText 
   });
-  addText(formatCurrency(invoice.convertedAmount, convertedCurrency), pageWidth - margin - 10, yPosition, { 
-    fontSize: 14, 
+  addText(formatCurrency(invoice.convertedAmount, convertedCurrency), pageWidth - margin - 4, yPosition, { 
+    fontSize: 10, 
     fontStyle: 'bold',
     color: accentColor,
     align: 'right'
   });
   
-  yPosition += 25;
+  yPosition += 12;
   
   // Total Section
   doc.setFillColor(...accentColor);
-  doc.roundedRect(margin, yPosition, contentWidth, 25, 3, 3, 'F');
+  doc.roundedRect(margin, yPosition, contentWidth, 14, 2, 2, 'F');
   
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL AMOUNT', margin + 10, yPosition + 16);
+  doc.text('TOTAL AMOUNT', margin + 4, yPosition + 9);
   
-  doc.setFontSize(16);
-  doc.text(formatCurrency(invoice.amount, invoice.currency), pageWidth - margin - 10, yPosition + 16, { align: 'right' });
+  doc.setFontSize(12);
+  doc.text(formatCurrency(invoice.amount, invoice.currency), pageWidth - margin - 4, yPosition + 9, { align: 'right' });
   
-  yPosition += 40;
+  yPosition += 20;
   
-  // Footer
-  addLine(yPosition, lightGray);
-  yPosition += 10;
+  // Notes Section (if exists)
+  if (invoice.notes && invoice.notes.trim()) {
+    addText('NOTES', margin, yPosition, { 
+      fontSize: 7, 
+      color: accentColor, 
+      fontStyle: 'bold' 
+    });
+    
+    yPosition += 4;
+    addLine(yPosition - 1);
+    yPosition += 3;
+    
+    doc.setFontSize(7);
+    doc.setTextColor(...grayText);
+    doc.setFont('helvetica', 'normal');
+    const splitNotes = doc.splitTextToSize(invoice.notes, contentWidth);
+    const truncatedNotes = splitNotes.slice(0, 3);
+    doc.text(truncatedNotes, margin, yPosition);
+    yPosition += truncatedNotes.length * 3 + 6;
+  }
   
-  addText('Thank you for your business!', pageWidth / 2, yPosition, { 
-    fontSize: 11, 
+  // Footer - position at bottom
+  const footerY = pageHeight - 15;
+  addLine(footerY, lightGray);
+  
+  addText('Thank you for your business!', pageWidth / 2, footerY + 5, { 
+    fontSize: 8, 
     color: grayText,
     align: 'center'
   });
   
-  yPosition += 8;
-  
-  addText('Generated by InvoicePK', pageWidth / 2, yPosition, { 
-    fontSize: 9, 
+  addText('Generated by InvoicePK', pageWidth / 2, footerY + 9, { 
+    fontSize: 6, 
     color: grayText,
     align: 'center'
   });
