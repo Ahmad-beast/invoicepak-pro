@@ -12,10 +12,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
+
+  const displayName = user?.displayName || user?.email?.split('@')[0] || 'User';
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,7 +32,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden sm:block">
-              Welcome, {user?.name}
+              Welcome, {displayName}
             </span>
             <Button variant="ghost" size="icon" onClick={handleLogout}>
               <LogOut className="w-5 h-5" />

@@ -26,13 +26,13 @@ const Signup = () => {
     
     setIsLoading(true);
 
-    const success = await signup(email, password, name);
+    const result = await signup(email, password, name);
     
-    if (success) {
+    if (result.success) {
       toast.success('Account created successfully!');
       navigate('/dashboard');
     } else {
-      toast.error('Email already exists');
+      toast.error(result.error || 'Failed to create account');
     }
     
     setIsLoading(false);

@@ -1,16 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
+import { 
+  User,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  updateProfile
+} from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string) => Promise<boolean>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -21,45 +24,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('invoicepk_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    const users = JSON.parse(localStorage.getItem('invoicepk_users') || '[]');
-    const foundUser = users.find((u: any) => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      const userData = { id: foundUser.id, email: foundUser.email, name: foundUser.name };
-      setUser(userData);
-      localStorage.setItem('invoicepk_user', JSON.stringify(userData));
-      return true;
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return { success: true };
+    } catch (error: any) {
+      let errorMessage = 'Failed to sign in';
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = 'Invalid email or password';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many attempts. Please try again later';
+      }
+      return { success: false, error: errorMessage };
     }
-    return false;
   };
 
-  const signup = async (email: string, password: string, name: string): Promise<boolean> => {
-    const users = JSON.parse(localStorage.getItem('invoicepk_users') || '[]');
-    const exists = users.find((u: any) => u.email === email);
-    
-    if (exists) return false;
-    
-    const newUser = { id: crypto.randomUUID(), email, password, name };
-    users.push(newUser);
-    localStorage.setItem('invoicepk_users', JSON.stringify(users));
-    
-    const userData = { id: newUser.id, email: newUser.email, name: newUser.name };
-    setUser(userData);
-    localStorage.setItem('invoicepk_user', JSON.stringify(userData));
-    return true;
+  const signup = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(result.user, { displayName: name });
+      return { success: true };
+    } catch (error: any) {
+      let errorMessage = 'Failed to create account';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Email already in use';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password should be at least 6 characters';
+      }
+      return { success: false, error: errorMessage };
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('invoicepk_user');
+  const logout = async () => {
+    await signOut(auth);
   };
 
   return (
