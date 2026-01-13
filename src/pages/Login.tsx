@@ -19,13 +19,13 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const success = await login(email, password);
+    const result = await login(email, password);
     
-    if (success) {
+    if (result.success) {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } else {
-      toast.error('Invalid email or password');
+      toast.error(result.error || 'Invalid email or password');
     }
     
     setIsLoading(false);

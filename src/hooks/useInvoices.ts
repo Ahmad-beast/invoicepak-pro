@@ -1,4 +1,17 @@
 import { useState, useEffect } from 'react';
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Invoice } from '@/types/invoice';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -7,13 +20,35 @@ const USD_TO_PKR_RATE = 278.50;
 export const useInvoices = () => {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      const allInvoices = JSON.parse(localStorage.getItem('invoicepk_invoices') || '[]');
-      const userInvoices = allInvoices.filter((inv: Invoice) => inv.userId === user.id);
-      setInvoices(userInvoices);
+    if (!user) {
+      setInvoices([]);
+      setLoading(false);
+      return;
     }
+
+    const q = query(
+      collection(db, 'invoices'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const invoiceData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      })) as Invoice[];
+      setInvoices(invoiceData);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching invoices:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [user]);
 
   const generateInvoiceNumber = () => {
@@ -24,48 +59,47 @@ export const useInvoices = () => {
     return `INV-${year}${month}-${random}`;
   };
 
-  const createInvoice = (data: Omit<Invoice, 'id' | 'userId' | 'createdAt' | 'invoiceNumber' | 'convertedAmount' | 'conversionRate'>) => {
+  const createInvoice = async (data: Omit<Invoice, 'id' | 'userId' | 'createdAt' | 'invoiceNumber' | 'convertedAmount' | 'conversionRate'>) => {
     if (!user) return null;
 
     const convertedAmount = data.currency === 'USD' 
       ? data.amount * USD_TO_PKR_RATE 
       : data.amount / USD_TO_PKR_RATE;
 
-    const newInvoice: Invoice = {
-      ...data,
-      id: crypto.randomUUID(),
-      userId: user.id,
-      createdAt: new Date().toISOString(),
-      invoiceNumber: generateInvoiceNumber(),
-      convertedAmount: Math.round(convertedAmount * 100) / 100,
-      conversionRate: USD_TO_PKR_RATE,
-    };
+    try {
+      const docRef = await addDoc(collection(db, 'invoices'), {
+        ...data,
+        userId: user.uid,
+        createdAt: serverTimestamp(),
+        invoiceNumber: generateInvoiceNumber(),
+        convertedAmount: Math.round(convertedAmount * 100) / 100,
+        conversionRate: USD_TO_PKR_RATE,
+      });
 
-    const allInvoices = JSON.parse(localStorage.getItem('invoicepk_invoices') || '[]');
-    allInvoices.push(newInvoice);
-    localStorage.setItem('invoicepk_invoices', JSON.stringify(allInvoices));
-    setInvoices(prev => [...prev, newInvoice]);
-    
-    return newInvoice;
+      return { id: docRef.id };
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      return null;
+    }
   };
 
-  const updateInvoiceStatus = (id: string, status: Invoice['status']) => {
-    const allInvoices = JSON.parse(localStorage.getItem('invoicepk_invoices') || '[]');
-    const updatedInvoices = allInvoices.map((inv: Invoice) => 
-      inv.id === id ? { ...inv, status } : inv
-    );
-    localStorage.setItem('invoicepk_invoices', JSON.stringify(updatedInvoices));
-    setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv));
+  const updateInvoiceStatus = async (id: string, status: Invoice['status']) => {
+    try {
+      await updateDoc(doc(db, 'invoices', id), { status });
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+    }
   };
 
-  const deleteInvoice = (id: string) => {
-    const allInvoices = JSON.parse(localStorage.getItem('invoicepk_invoices') || '[]');
-    const filteredInvoices = allInvoices.filter((inv: Invoice) => inv.id !== id);
-    localStorage.setItem('invoicepk_invoices', JSON.stringify(filteredInvoices));
-    setInvoices(prev => prev.filter(inv => inv.id !== id));
+  const deleteInvoice = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'invoices', id));
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+    }
   };
 
   const getConversionRate = () => USD_TO_PKR_RATE;
 
-  return { invoices, createInvoice, updateInvoiceStatus, deleteInvoice, getConversionRate };
+  return { invoices, loading, createInvoice, updateInvoiceStatus, deleteInvoice, getConversionRate };
 };
