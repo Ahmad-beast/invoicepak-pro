@@ -18,17 +18,24 @@ import { useAuth } from '@/contexts/AuthContext';
 const USD_TO_PKR_RATE = 278.50;
 
 export const useInvoices = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for auth to finish loading before doing anything
+    if (authLoading) {
+      return;
+    }
+
+    // If no user after auth resolves, clear invoices
     if (!user) {
       setInvoices([]);
       setLoading(false);
       return;
     }
 
+    // User is authenticated, fetch their invoices
     const q = query(
       collection(db, 'invoices'),
       where('userId', '==', user.uid),
@@ -49,7 +56,7 @@ export const useInvoices = () => {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, authLoading]);
 
   const generateInvoiceNumber = () => {
     const date = new Date();
