@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Invoice } from '@/types/invoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, CheckCircle, Send, FileText } from 'lucide-react';
+import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -13,6 +15,8 @@ interface InvoiceListProps {
 }
 
 export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListProps) => {
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   const getStatusColor = (status: Invoice['status']) => {
     switch (status) {
       case 'paid': return 'bg-green-500/20 text-green-400 border-green-500/30';
@@ -28,6 +32,17 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(amount);
+  };
+
+  const handleDownloadPDF = async (invoice: Invoice) => {
+    setDownloadingId(invoice.id);
+    try {
+      // Small delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 300));
+      generateInvoicePDF(invoice);
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   if (invoices.length === 0) {
@@ -105,9 +120,25 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {format(new Date(invoice.createdAt), 'MMM dd, yyyy')}
-              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownloadPDF(invoice)}
+                  disabled={downloadingId === invoice.id}
+                  className="text-xs"
+                >
+                  {downloadingId === invoice.id ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Download className="w-3 h-3 mr-1" />
+                  )}
+                  Download PDF
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(invoice.createdAt), 'MMM dd, yyyy')}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
