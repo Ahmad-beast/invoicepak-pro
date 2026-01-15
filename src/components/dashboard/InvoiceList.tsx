@@ -3,11 +3,12 @@ import { Invoice } from '@/types/invoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign, Link2, Copy } from 'lucide-react';
+import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign, Link2, Crown } from 'lucide-react';
 import { format } from 'date-fns';
 import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -17,6 +18,9 @@ interface InvoiceListProps {
 
 export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListProps) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const { canUseFeature, subscription } = useSubscription();
+  const canShareInvoice = canUseFeature('invoiceSharing');
+  const canRemoveBranding = canUseFeature('removeBranding');
 
   const getStatusStyle = (status: Invoice['status']) => {
     switch (status) {
@@ -51,14 +55,17 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
     setDownloadingId(invoice.id);
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
-      generateInvoicePDF(invoice);
+      generateInvoicePDF(invoice, canRemoveBranding);
     } finally {
       setDownloadingId(null);
     }
   };
 
   const handleCopyShareLink = (invoice: Invoice) => {
-    // Use document ID directly for sharing
+    if (!canShareInvoice) {
+      toast.error('Invoice sharing is a Pro feature. Upgrade to unlock.');
+      return;
+    }
     const shareUrl = `${window.location.origin}/invoice/${invoice.id}`;
     navigator.clipboard.writeText(shareUrl);
     toast.success('Share link copied to clipboard!');
@@ -160,6 +167,7 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
                 <DropdownMenuItem onClick={() => handleCopyShareLink(invoice)} className="gap-2">
                   <Link2 className="w-4 h-4" />
                   Copy Share Link
+                  {!canShareInvoice && <Crown className="w-3 h-3 ml-auto text-primary" />}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {invoice.status !== 'sent' && (
