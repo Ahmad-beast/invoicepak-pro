@@ -1,43 +1,50 @@
 import jsPDF from 'jspdf';
-import { Invoice, InvoiceItem } from '@/types/invoice';
+import { Invoice } from '@/types/invoice';
 import { format } from 'date-fns';
 
-// --- CONSTANTS & CONFIGURATION ---
-const PAGE_FORMAT = 'a4';
-const UNIT = 'mm';
-const MARGIN = 15;
+// --- CONFIGURATION & STYLING ---
+const PAGE_CONFIG = {
+  format: 'a4',
+  unit: 'mm',
+  margin: 15, // margins
+  lineHeight: 6, // spacing between lines
+};
+
+// Professional Color Palette
 const COLORS = {
-  primary: [249, 115, 22] as [number, number, number], // Orange #F97316
-  secondary: [15, 23, 42] as [number, number, number], // Dark Slate #0F172A
-  accent: [241, 245, 249] as [number, number, number], // Light Gray #F1F5F9
-  text: [51, 65, 85] as [number, number, number],      // Slate 700
-  lightText: [100, 116, 139] as [number, number, number], // Slate 500
+  primary: [249, 115, 22] as [number, number, number],    // Brand Orange
+  secondary: [15, 23, 42] as [number, number, number],    // Dark Slate (Headings)
+  text: [51, 65, 85] as [number, number, number],         // Normal Text
+  lightText: [100, 116, 139] as [number, number, number], // Muted Text
+  border: [226, 232, 240] as [number, number, number],    // Light Borders
+  accentBg: [248, 250, 252] as [number, number, number],  // Light Gray BG
   white: [255, 255, 255] as [number, number, number],
-  border: [226, 232, 240] as [number, number, number], // Border Gray
+  success: [34, 197, 94] as [number, number, number],     // Green
+  info: [59, 130, 246] as [number, number, number],       // Blue
 };
 
 export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = false): void => {
   // Initialize PDF
   const doc = new jsPDF({
     orientation: 'portrait',
-    unit: UNIT,
-    format: PAGE_FORMAT,
+    unit: PAGE_CONFIG.unit,
+    format: PAGE_CONFIG.format,
   });
 
-  // Page Dimensions
+  // Dimensions
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const contentWidth = pageWidth - MARGIN * 2;
-  const rightColX = pageWidth - MARGIN;
-
-  // State Tracking for Layout
-  let y = MARGIN;
+  const contentWidth = pageWidth - (PAGE_CONFIG.margin * 2);
+  const rightColX = pageWidth - PAGE_CONFIG.margin;
+  
+  // State
+  let y = PAGE_CONFIG.margin;
   let pageNumber = 1;
 
   // --- HELPER FUNCTIONS ---
 
-  // 1. Text Helper with Auto-Wrapping
-  const addText = (
+  // 1. Text Writer with Auto-Wrap support
+  const drawText = (
     text: string | number,
     x: number,
     yPos: number,
@@ -46,28 +53,33 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
       color?: [number, number, number];
       weight?: 'normal' | 'bold';
       align?: 'left' | 'center' | 'right';
-      maxWidth?: number; // For wrapping
+      maxWidth?: number; // If provided, text will wrap
     } = {}
-  ): number => {
-    const { size = 9, color = COLORS.secondary, weight = 'normal', align = 'left', maxWidth } = options;
-    
+  ) => {
+    const { 
+      size = 9, 
+      color = COLORS.text, 
+      weight = 'normal', 
+      align = 'left', 
+      maxWidth 
+    } = options;
+
     doc.setFontSize(size);
     doc.setTextColor(...color);
     doc.setFont('helvetica', weight);
 
-    // Handle Text Wrapping
     if (maxWidth) {
-      const textLines = doc.splitTextToSize(String(text), maxWidth);
-      doc.text(textLines, x, yPos, { align });
-      // Return the height utilized by the text
-      return textLines.length * (size * 0.3527) + 2; // Approximate height in mm
+      const lines = doc.splitTextToSize(String(text), maxWidth);
+      doc.text(lines, x, yPos, { align });
+      // Return height consumed by text
+      return lines.length * (size * 0.3527 + 1.5); 
     } else {
       doc.text(String(text), x, yPos, { align });
-      return 0;
+      return size * 0.3527 + 2;
     }
   };
 
-  // 2. Formatting Helper
+  // 2. Format Currency
   const formatMoney = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-PK', {
       style: 'currency',
@@ -77,194 +89,259 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     }).format(amount);
   };
 
-  // 3. Page Break Checker
-  const checkPageBreak = (requiredSpace: number) => {
-    // Footer Height ~ 20mm
-    if (y + requiredSpace > pageHeight - 20) {
-      addFooter(); // Add footer to current page
+  // 3. Draw Footer (Page Number)
+  const drawFooter = (pageNum: number) => {
+    const footerY = pageHeight - 12;
+    
+    // Top Border Line
+    doc.setDrawColor(...COLORS.border);
+    doc.setLineWidth(0.5);
+    doc.line(PAGE_CONFIG.margin, footerY - 5, pageWidth - PAGE_CONFIG.margin, footerY - 5);
+
+    // Page Info
+    drawText(`Page ${pageNum}`, pageWidth / 2, footerY, { 
+      size: 8, 
+      color: COLORS.lightText, 
+      align: 'center' 
+    });
+
+    // Branding in footer
+    if (!removeBranding) {
+      drawText('Generated by InvoicePK', pageWidth - PAGE_CONFIG.margin, footerY, { 
+        size: 7, 
+        color: COLORS.lightText, 
+        align: 'right' 
+      });
+    }
+  };
+
+  // 4. Page Break Logic
+  const checkPageBreak = (requiredHeight: number) => {
+    if (y + requiredHeight > pageHeight - 20) {
+      drawFooter(pageNumber); // Close current page
       doc.addPage();
       pageNumber++;
-      y = MARGIN; // Reset Y
+      y = PAGE_CONFIG.margin; // Reset Y
       return true;
     }
     return false;
   };
 
-  // 4. Footer Generator (Calls on every page)
-  const addFooter = () => {
-    const footerY = pageHeight - 12;
-    
-    // Line
-    doc.setDrawColor(...COLORS.border);
-    doc.setLineWidth(0.5);
-    doc.line(MARGIN, footerY - 5, pageWidth - MARGIN, footerY - 5);
+  // --- START DOCUMENT GENERATION ---
 
-    // Page Number
-    addText(`Page ${pageNumber}`, pageWidth / 2, footerY, { size: 8, color: COLORS.lightText, align: 'center' });
-
-    // Branding (if enabled)
-    if (!removeBranding) {
-      addText('Generated by InvoicePK', pageWidth - MARGIN, footerY, { size: 7, color: COLORS.lightText, align: 'right' });
-    }
-  };
-
-  // --- START DRAWING INVOICE ---
-
-  // === 1. HEADER SECTION ===
-  // Logo / Brand Area
+  // === HEADER ===
+  // Logo / Brand Name
   if (!removeBranding) {
-    addText('InvoicePK', MARGIN, y + 6, { size: 20, weight: 'bold', color: COLORS.primary });
-    addText('Professional Invoice Management', MARGIN, y + 11, { size: 8, color: COLORS.lightText });
+    drawText('InvoicePK', PAGE_CONFIG.margin, y + 6, { 
+      size: 22, 
+      weight: 'bold', 
+      color: COLORS.primary 
+    });
+    drawText('Professional Invoice Management', PAGE_CONFIG.margin, y + 12, { 
+      size: 8, 
+      color: COLORS.lightText 
+    });
   } else {
-    // Fallback if branding removed
-    addText(invoice.senderName, MARGIN, y + 6, { size: 18, weight: 'bold', color: COLORS.secondary });
-  }
-
-  // Invoice Title & ID
-  addText('INVOICE', rightColX, y + 6, { size: 24, weight: 'bold', color: COLORS.secondary, align: 'right' });
-  addText(`# ${invoice.invoiceNumber}`, rightColX, y + 13, { size: 10, weight: 'bold', color: COLORS.text, align: 'right' });
-
-  y += 25;
-
-  // Separator Line
-  doc.setDrawColor(...COLORS.primary);
-  doc.setLineWidth(0.8);
-  doc.line(MARGIN, y, pageWidth - MARGIN, y);
-  y += 10;
-
-  // === 2. ADDRESS & DATES SECTION ===
-  const col1 = MARGIN;
-  const col2 = MARGIN + 65;
-  const col3 = pageWidth - MARGIN - 45;
-
-  // FROM Section
-  addText('FROM:', col1, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-  y += 5;
-  addText(invoice.senderName || 'Sender Name', col1, y, { size: 10, weight: 'bold' });
-  // Add email if available in future
-  // y += 5; addText(invoice.senderEmail, col1, y, { size: 9, color: COLORS.lightText });
-  
-  // Reset Y for next column
-  let maxY = y; 
-  y -= 5; // Go back up
-
-  // BILL TO Section
-  addText('BILL TO:', col2, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-  y += 5;
-  addText(invoice.clientName, col2, y, { size: 10, weight: 'bold' });
-  
-  y = Math.max(maxY, y); // Sync Y
-  y -= 5; // Reset for Date Column
-
-  // DATES Section (Right Side Box)
-  // Background Box
-  doc.setFillColor(...COLORS.accent);
-  doc.roundedRect(col3 - 5, y - 5, 50 + MARGIN, 28, 2, 2, 'F');
-
-  // Status
-  addText('Status:', col3, y, { size: 9 });
-  const statusColor = invoice.status === 'paid' ? [34, 197, 94] : [59, 130, 246]; // Green or Blue
-  addText(invoice.status.toUpperCase(), rightColX, y, { size: 9, weight: 'bold', color: statusColor as any, align: 'right' });
-  
-  y += 7;
-  addText('Invoice Date:', col3, y, { size: 9 });
-  addText(format(new Date(invoice.invoiceDate), 'dd MMM yyyy'), rightColX, y, { size: 9, weight: 'bold', align: 'right' });
-
-  y += 7;
-  addText('Due Date:', col3, y, { size: 9 });
-  addText(format(new Date(invoice.dueDate), 'dd MMM yyyy'), rightColX, y, { size: 9, weight: 'bold', align: 'right' });
-
-  y += 20; // Move down after header section
-
-  // === 3. PROJECT SUMMARY ===
-  checkPageBreak(30);
-  addText('PROJECT / SERVICE', MARGIN, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-  y += 5;
-  
-  // Dynamic Description Text
-  doc.setFontSize(10);
-  doc.setTextColor(...COLORS.text);
-  const descLines = doc.splitTextToSize(invoice.serviceDescription, contentWidth);
-  doc.text(descLines, MARGIN, y);
-  
-  y += (descLines.length * 5) + 8; // Adjust spacing based on text length
-
-  // === 4. ITEMS TABLE ===
-  const hasItems = invoice.items && invoice.items.length > 0;
-  
-  if (hasItems) {
-    // Table Header Drawing Function
-    const drawTableHeader = (currentY: number) => {
-      doc.setFillColor(...COLORS.secondary);
-      doc.rect(MARGIN, currentY, contentWidth, 8, 'F');
-      
-      const qtyX = pageWidth - MARGIN - 50;
-      const rateX = pageWidth - MARGIN - 30;
-      const amountX = pageWidth - MARGIN - 3;
-
-      addText('DESCRIPTION', MARGIN + 3, currentY + 5.5, { size: 8, weight: 'bold', color: COLORS.white });
-      addText('QTY', qtyX, currentY + 5.5, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
-      addText('RATE', rateX, currentY + 5.5, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
-      addText('AMOUNT', amountX, currentY + 5.5, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
-      
-      return 8; // Header height
-    };
-
-    // Check space for header + at least 1 item
-    if (checkPageBreak(25)) {
-      y += drawTableHeader(y); // Draw on new page
-    } else {
-      y += drawTableHeader(y); // Draw on current page
-    }
-
-    y += 2; // Spacing
-
-    // Loop Items
-    invoice.items!.forEach((item, index) => {
-      const qtyX = pageWidth - MARGIN - 50;
-      const rateX = pageWidth - MARGIN - 30;
-      const amountX = pageWidth - MARGIN - 3;
-      
-      // Calculate Height needed for this row
-      // We wrap the description to calculate height
-      const descWidth = contentWidth - 65; // Available width for text
-      const descLines = doc.splitTextToSize(item.description, descWidth);
-      const rowHeight = Math.max(10, descLines.length * 5 + 4);
-
-      // Check for Page Break
-      if (checkPageBreak(rowHeight)) {
-        // If page break, redraw header
-        y += drawTableHeader(y);
-        y += 2;
-      }
-
-      // Zebra Striping (Optional, looks nice)
-      if (index % 2 !== 0) {
-        doc.setFillColor(...COLORS.accent);
-        doc.rect(MARGIN, y, contentWidth, rowHeight, 'F');
-      }
-
-      // Draw Row Content
-      doc.setTextColor(...COLORS.text);
-      doc.setFontSize(9);
-      doc.text(descLines, MARGIN + 3, y + 4); // Wrapped Description
-      
-      addText(item.quantity.toString(), qtyX, y + 4, { size: 9, align: 'right' });
-      addText(formatMoney(item.rate, invoice.currency), rateX, y + 4, { size: 9, align: 'right' });
-      addText(formatMoney(item.amount, invoice.currency), amountX, y + 4, { size: 9, weight: 'bold', align: 'right' });
-
-      y += rowHeight;
-      
-      // Draw Divider Line
-      doc.setDrawColor(...COLORS.border);
-      doc.setLineWidth(0.2);
-      doc.line(MARGIN, y, pageWidth - MARGIN, y);
+    // If branding off, show Sender Name prominent
+    drawText(invoice.senderName || 'INVOICE', PAGE_CONFIG.margin, y + 6, { 
+      size: 20, 
+      weight: 'bold', 
+      color: COLORS.secondary 
     });
   }
 
-  y += 5; // Spacing after table
+  // Invoice Details (Right Aligned)
+  drawText('INVOICE', rightColX, y + 6, { 
+    size: 24, 
+    weight: 'bold', 
+    color: COLORS.secondary, 
+    align: 'right' 
+  });
+  drawText(`# ${invoice.invoiceNumber}`, rightColX, y + 13, { 
+    size: 10, 
+    weight: 'bold', 
+    color: COLORS.text, 
+    align: 'right' 
+  });
 
-  // === 5. TOTALS & NOTES SECTION ===
+  y += 25;
+
+  // Divider Line
+  doc.setDrawColor(...COLORS.primary);
+  doc.setLineWidth(0.8);
+  doc.line(PAGE_CONFIG.margin, y, pageWidth - PAGE_CONFIG.margin, y);
+  
+  y += 10;
+
+  // === INFO GRID (FROM / TO / DATES) ===
+  const col1X = PAGE_CONFIG.margin;
+  const col2X = PAGE_CONFIG.margin + 70; // Middle column
+  const col3X = pageWidth - PAGE_CONFIG.margin - 60; // Right box
+
+  // -- FROM SECTION --
+  drawText('FROM:', col1X, y, { size: 8, weight: 'bold', color: COLORS.lightText });
+  y += 5;
+  const senderHeight = drawText(invoice.senderName || 'Sender Name', col1X, y, { 
+    size: 10, 
+    weight: 'bold', 
+    maxWidth: 60 
+  });
+  
+  // -- TO SECTION --
+  let midY = y - 5; // Reset Y for middle column
+  drawText('BILL TO:', col2X, midY, { size: 8, weight: 'bold', color: COLORS.lightText });
+  midY += 5;
+  const clientHeight = drawText(invoice.clientName, col2X, midY, { 
+    size: 10, 
+    weight: 'bold', 
+    maxWidth: 60 
+  });
+
+  // Determine max height used by addresses to push Y down
+  const maxAddrHeight = Math.max(senderHeight, clientHeight, 15);
+
+  // -- DATES & STATUS BOX (Right Side) --
+  // Box Background
+  const boxY = y - 10;
+  doc.setFillColor(...COLORS.accentBg);
+  doc.roundedRect(col3X, boxY, 60 + PAGE_CONFIG.margin, 35, 2, 2, 'F');
+
+  let boxTextY = boxY + 8;
+  const boxLabelX = col3X + 5;
+  const boxValueX = pageWidth - PAGE_CONFIG.margin - 5;
+
+  // Status
+  drawText('Status:', boxLabelX, boxTextY, { size: 9, color: COLORS.text });
+  const statusColor = invoice.status === 'paid' ? COLORS.success : COLORS.info;
+  drawText(invoice.status.toUpperCase(), boxValueX, boxTextY, { 
+    size: 9, 
+    weight: 'bold', 
+    color: statusColor, 
+    align: 'right' 
+  });
+
+  boxTextY += 8;
+  // Invoice Date
+  drawText('Invoice Date:', boxLabelX, boxTextY, { size: 9, color: COLORS.text });
+  drawText(format(new Date(invoice.invoiceDate), 'dd MMM yyyy'), boxValueX, boxTextY, { 
+    size: 9, 
+    weight: 'bold', 
+    align: 'right' 
+  });
+
+  boxTextY += 8;
+  // Due Date
+  drawText('Due Date:', boxLabelX, boxTextY, { size: 9, color: COLORS.text });
+  drawText(format(new Date(invoice.dueDate), 'dd MMM yyyy'), boxValueX, boxTextY, { 
+    size: 9, 
+    weight: 'bold', 
+    align: 'right' 
+  });
+
+  // Move Y below the header/info section
+  y = Math.max(y + maxAddrHeight, boxTextY + 15);
+
+  // === PROJECT DESCRIPTION ===
+  checkPageBreak(30);
+
+  drawText('PROJECT DESCRIPTION', PAGE_CONFIG.margin, y, { 
+    size: 8, 
+    weight: 'bold', 
+    color: COLORS.lightText 
+  });
+  y += 5;
+  
+  const descHeight = drawText(invoice.serviceDescription, PAGE_CONFIG.margin, y, {
+    size: 10,
+    color: COLORS.text,
+    maxWidth: contentWidth
+  });
+
+  y += descHeight + 10;
+
+  // === ITEMS TABLE ===
+  const hasItems = invoice.items && invoice.items.length > 0;
+  
+  if (hasItems) {
+    // Columns Configuration
+    const cols = {
+      desc: { x: PAGE_CONFIG.margin + 3, w: contentWidth * 0.5 },
+      qty: { x: pageWidth - PAGE_CONFIG.margin - 60, w: 20, align: 'right' },
+      rate: { x: pageWidth - PAGE_CONFIG.margin - 35, w: 25, align: 'right' },
+      amount: { x: pageWidth - PAGE_CONFIG.margin - 3, w: 30, align: 'right' }
+    };
+
+    // Header Drawer Function
+    const drawTableHeader = (posY: number) => {
+      doc.setFillColor(...COLORS.secondary);
+      doc.rect(PAGE_CONFIG.margin, posY, contentWidth, 9, 'F');
+      
+      const textY = posY + 6;
+      drawText('DESCRIPTION', cols.desc.x, textY, { size: 8, weight: 'bold', color: COLORS.white });
+      drawText('QTY', cols.qty.x, textY, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
+      drawText('RATE', cols.rate.x, textY, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
+      drawText('AMOUNT', cols.amount.x, textY, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
+      
+      return 9; // header height
+    };
+
+    // Draw Initial Header
+    if (checkPageBreak(20)) {
+       y += drawTableHeader(y);
+    } else {
+       y += drawTableHeader(y);
+    }
+    
+    y += 1; // spacer
+
+    // Loop Items
+    invoice.items!.forEach((item, index) => {
+      // Calculate row height based on description wrapping
+      // We simulate wrapping to know height
+      const descLines = doc.splitTextToSize(item.description, cols.desc.w);
+      const lineHeight = 5;
+      const rowHeight = Math.max(10, (descLines.length * lineHeight) + 6);
+
+      // Check Page Break
+      if (checkPageBreak(rowHeight)) {
+        y += drawTableHeader(y); // Draw header again on new page
+        y += 1;
+      }
+
+      // Zebra Striping
+      if (index % 2 === 0) {
+        doc.setFillColor(...COLORS.accentBg);
+        doc.rect(PAGE_CONFIG.margin, y, contentWidth, rowHeight, 'F');
+      }
+
+      const rowY = y + 5;
+      
+      // Description
+      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.text);
+      doc.text(descLines, cols.desc.x, rowY);
+      
+      // Qty
+      drawText(item.quantity.toString(), cols.qty.x, rowY, { size: 9, align: 'right' });
+      
+      // Rate
+      drawText(formatMoney(item.rate, invoice.currency), cols.rate.x, rowY, { size: 9, align: 'right' });
+      
+      // Amount
+      drawText(formatMoney(item.amount, invoice.currency), cols.amount.x, rowY, { size: 9, weight: 'bold', align: 'right' });
+
+      y += rowHeight;
+      
+      // Divider Line
+      doc.setDrawColor(...COLORS.border);
+      doc.setLineWidth(0.2);
+      doc.line(PAGE_CONFIG.margin, y, pageWidth - PAGE_CONFIG.margin, y);
+    });
+  }
+
+  y += 10;
+
+  // === TOTALS & NOTES SECTION ===
   // Calculate Totals
   const totalAmount = hasItems 
     ? invoice.items!.reduce((sum, item) => sum + item.amount, 0) 
@@ -275,60 +352,82 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     : totalAmount / invoice.conversionRate;
   const convertedCurrency = invoice.currency === 'USD' ? 'PKR' : 'USD';
 
-  // Check Page Break for Bottom Section
-  // We need about 60mm for totals + notes
+  // Space check for bottom section (~60mm needed)
   checkPageBreak(60);
 
+  const bottomSectionY = y;
   const notesWidth = contentWidth * 0.55;
   const totalsWidth = contentWidth * 0.40;
-  const totalsX = pageWidth - MARGIN - totalsWidth;
+  const totalsX = pageWidth - PAGE_CONFIG.margin - totalsWidth;
 
   // -- LEFT SIDE: NOTES --
-  const notesStartY = y;
   if (invoice.notes) {
-    addText('NOTES & TERMS', MARGIN, y + 5, { size: 8, weight: 'bold', color: COLORS.lightText });
-    y += 10;
+    drawText('NOTES & TERMS', PAGE_CONFIG.margin, y + 4, { 
+      size: 8, 
+      weight: 'bold', 
+      color: COLORS.lightText 
+    });
     
-    doc.setFontSize(8);
-    doc.setTextColor(...COLORS.lightText);
-    const noteLines = doc.splitTextToSize(invoice.notes, notesWidth);
-    doc.text(noteLines, MARGIN, y);
+    y += 9;
+    
+    drawText(invoice.notes, PAGE_CONFIG.margin, y, {
+      size: 8,
+      color: COLORS.lightText,
+      maxWidth: notesWidth
+    });
   }
 
   // -- RIGHT SIDE: TOTALS --
-  // Reset Y to start of section for Totals column
-  let totalsY = notesStartY;
+  let totalsY = bottomSectionY;
   
-  // Background for Totals
-  doc.setFillColor(...COLORS.accent);
+  // Background Box for Totals
+  doc.setFillColor(...COLORS.accentBg);
   doc.roundedRect(totalsX, totalsY, totalsWidth, 45, 2, 2, 'F');
-  
+
   totalsY += 8;
   const labelX = totalsX + 5;
-  const valueX = pageWidth - MARGIN - 5;
+  const valX = pageWidth - PAGE_CONFIG.margin - 5;
 
   // Subtotal
-  addText(`Subtotal (${invoice.currency})`, labelX, totalsY, { size: 9, color: COLORS.lightText });
-  addText(formatMoney(totalAmount, invoice.currency), valueX, totalsY, { size: 9, weight: 'bold', align: 'right' });
-  
-  totalsY += 8;
-  
-  // Exchange Rate (only if relevant)
-  addText('Exchange Rate', labelX, totalsY, { size: 9, color: COLORS.lightText });
-  addText(`1 USD = ${invoice.conversionRate} PKR`, valueX, totalsY, { size: 9, align: 'right' });
-  
-  totalsY += 8;
+  drawText(`Subtotal (${invoice.currency})`, labelX, totalsY, { size: 9, color: COLORS.lightText });
+  drawText(formatMoney(totalAmount, invoice.currency), valX, totalsY, { 
+    size: 10, 
+    weight: 'bold', 
+    align: 'right' 
+  });
 
-  // Divider inside totals box
+  totalsY += 8;
+  // Exchange Rate
+  drawText('Exchange Rate', labelX, totalsY, { size: 9, color: COLORS.lightText });
+  drawText(`1 USD = ${invoice.conversionRate.toFixed(2)} PKR`, valX, totalsY, { 
+    size: 9, 
+    align: 'right' 
+  });
+
+  totalsY += 10;
+  // Divider
   doc.setDrawColor(...COLORS.border);
-  doc.line(totalsX + 5, totalsY, pageWidth - MARGIN - 5, totalsY);
+  doc.line(totalsX + 5, totalsY, pageWidth - PAGE_CONFIG.margin - 5, totalsY);
+  
   totalsY += 8;
+  
+  // GRAND TOTAL
+  drawText(`TOTAL (${convertedCurrency})`, labelX, totalsY + 2, { 
+    size: 11, 
+    weight: 'bold', 
+    color: COLORS.primary 
+  });
+  
+  drawText(formatMoney(convertedAmount, convertedCurrency), valX, totalsY + 2, { 
+    size: 14, 
+    weight: 'bold', 
+    color: COLORS.primary, 
+    align: 'right' 
+  });
 
-  // Grand Total
-  addText(`TOTAL (${convertedCurrency})`, labelX, totalsY + 2, { size: 10, weight: 'bold', color: COLORS.primary });
-  addText(formatMoney(convertedAmount, convertedCurrency), valueX, totalsY + 2, { size: 12, weight: 'bold', color: COLORS.primary, align: 'right' });
-
-  // === 6. FINALIZE ===
-  addFooter(); // Add footer to the last page
-  doc.save(`${invoice.invoiceNumber || 'invoice'}.pdf`);
+  // Finalize
+  drawFooter(pageNumber); // Footer on last page
+  
+  // Save
+  doc.save(`${invoice.invoiceNumber || 'Invoice'}.pdf`);
 };
