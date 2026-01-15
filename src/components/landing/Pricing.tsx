@@ -1,48 +1,14 @@
 import { Button } from '@/components/ui/button';
-import { Check } from 'lucide-react';
+import { Check, Crown, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const plans = [
-  {
-    name: 'Free',
-    price: '0',
-    description: 'Perfect for getting started',
-    features: [
-      'Up to 5 invoices per month',
-      'USD to PKR conversion',
-      'PDF export',
-      'Basic support',
-    ],
-    popular: false,
-  },
-  {
-    name: 'Pro',
-    price: '999',
-    description: 'For growing freelancers',
-    features: [
-      'Unlimited invoices',
-      'USD to PKR conversion',
-      'PDF export',
-      'Priority support',
-      'Invoice templates',
-      'Payment reminders',
-    ],
-    popular: true,
-  },
-  {
-    name: 'Business',
-    price: '2,499',
-    description: 'For agencies & teams',
-    features: [
-      'Everything in Pro',
-      'Team collaboration',
-      'Custom branding',
-      'Analytics dashboard',
-      'API access',
-      'Dedicated support',
-    ],
-    popular: false,
-  },
+const PRO_FEATURES = [
+  'Unlimited invoices',
+  'Custom exchange rate',
+  'Invoice sharing links',
+  'No branding on PDF',
+  'Priority support',
+  'All future updates',
 ];
 
 export const Pricing = () => {
@@ -57,49 +23,76 @@ export const Pricing = () => {
             Simple, Transparent Pricing
           </h2>
           <p className="text-muted-foreground mt-4 max-w-xl mx-auto">
-            Choose the plan that works best for you. All plans include core features.
+            One plan, all features included. No hidden fees.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`p-6 rounded-xl border transition-colors ${
-                plan.popular
-                  ? 'bg-primary/5 border-primary'
-                  : 'bg-card border-border hover:border-primary/30'
-              }`}
-            >
-              {plan.popular && (
-                <span className="inline-block px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-full mb-4">
-                  Most Popular
-                </span>
-              )}
-              <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
-              <p className="text-muted-foreground text-sm mt-1">{plan.description}</p>
-              <div className="mt-4 mb-6">
-                <span className="text-4xl font-bold text-foreground">PKR {plan.price}</span>
-                <span className="text-muted-foreground">/month</span>
+        <div className="max-w-md mx-auto">
+          <div className="p-8 rounded-xl border-2 border-amber-500/50 bg-card overflow-hidden relative">
+            {/* Top gradient bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-orange-500" />
+            
+            {/* Badge */}
+            <span className="inline-block px-3 py-1 text-xs font-medium bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-full mb-4">
+              Recommended
+            </span>
+            
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <Crown className="w-6 h-6 text-amber-500" />
               </div>
-              <ul className="space-y-3 mb-6">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <Link to="/signup">
-                <Button
-                  className="w-full"
-                  variant={plan.popular ? 'default' : 'outline'}
-                >
-                  Get Started
-                </Button>
-              </Link>
+              <div>
+                <h3 className="text-xl font-bold text-foreground">InvoicePK Pro</h3>
+                <p className="text-muted-foreground text-sm">Perfect for freelancers & small businesses</p>
+              </div>
             </div>
-          ))}
+            
+            {/* Price */}
+            <div className="mt-6 mb-8">
+              <span className="text-4xl font-bold text-foreground">₨999</span>
+              <span className="text-muted-foreground"> / month</span>
+            </div>
+            
+            {/* Features */}
+            <ul className="space-y-3 mb-8">
+              {PRO_FEATURES.map((feature) => (
+                <li key={feature} className="flex items-center gap-3 text-sm">
+                  <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3 text-amber-500" />
+                  </div>
+                  <span className="text-foreground">{feature}</span>
+                </li>
+              ))}
+            </ul>
+            
+            {/* CTA Button */}
+            <Link to="/signup">
+              <Button className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 h-12 text-base font-medium">
+                <Crown className="w-5 h-5" />
+                Get Started
+              </Button>
+            </Link>
+            
+            <p className="text-xs text-center text-muted-foreground mt-4">
+              Cancel anytime • Secure payment
+            </p>
+          </div>
+          
+          {/* Benefits note */}
+          <div className="mt-6 p-6 rounded-xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                <Sparkles className="w-6 h-6 text-amber-500" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground">Why Choose Pro?</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Create unlimited professional invoices, share with clients, and remove branding from your PDFs.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
