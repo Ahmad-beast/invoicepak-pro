@@ -50,12 +50,25 @@ export type PlanFeature = keyof typeof PLAN_LIMITS.free;
 /**
  * Check if a user has access to a specific feature
  */
+// Active subscription statuses that grant Pro access
+const ACTIVE_STATUSES: SubscriptionStatus[] = ['active', 'on_trial', 'paused'];
+
+/**
+ * Check if subscription status grants Pro access
+ */
+export const isActiveSubscription = (status: SubscriptionStatus | null): boolean => {
+  return status !== null && ACTIVE_STATUSES.includes(status);
+};
+
+/**
+ * Check if a user has access to a specific feature
+ */
 export const hasFeatureAccess = (
   plan: PlanType,
   status: SubscriptionStatus | null,
   feature: 'customExchangeRate' | 'invoiceSharing' | 'removeBranding'
 ): boolean => {
-  if (plan === 'pro' && status === 'active') {
+  if (plan === 'pro' && isActiveSubscription(status)) {
     return PLAN_LIMITS.pro[feature];
   }
   return PLAN_LIMITS.free[feature];
@@ -69,7 +82,7 @@ export const canCreateMoreInvoices = (
   status: SubscriptionStatus | null,
   currentCount: number
 ): boolean => {
-  if (plan === 'pro' && status === 'active') {
+  if (plan === 'pro' && isActiveSubscription(status)) {
     return true;
   }
   return currentCount < PLAN_LIMITS.free.maxInvoicesPerMonth;
@@ -83,7 +96,7 @@ export const getRemainingInvoiceCount = (
   status: SubscriptionStatus | null,
   currentCount: number
 ): number => {
-  if (plan === 'pro' && status === 'active') {
+  if (plan === 'pro' && isActiveSubscription(status)) {
     return Infinity;
   }
   return Math.max(0, PLAN_LIMITS.free.maxInvoicesPerMonth - currentCount);
@@ -96,5 +109,5 @@ export const isProUser = (
   plan: PlanType,
   status: SubscriptionStatus | null
 ): boolean => {
-  return plan === 'pro' && status === 'active';
+  return plan === 'pro' && isActiveSubscription(status);
 };
