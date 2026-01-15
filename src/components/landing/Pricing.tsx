@@ -75,7 +75,7 @@ export const Pricing = () => {
             </Link>
             
             <p className="text-xs text-center text-muted-foreground mt-4">
-              Cancel anytime • Secure payment
+              Cancel anytime • Secure payment via Lemon Squeezy
             </p>
           </div>
           
