@@ -1,6 +1,7 @@
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { DashboardStatsSkeleton } from '@/components/dashboard/DashboardStatsSkeleton';
+import { MonthlySummary } from '@/components/dashboard/MonthlySummary';
 import { InvoiceList } from '@/components/dashboard/InvoiceList';
 import { InvoiceListSkeleton } from '@/components/dashboard/InvoiceListSkeleton';
 import { useAuth } from '@/contexts/AuthContext';
@@ -74,6 +75,9 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Monthly Summary */}
+      {!loading && invoices.length > 0 && <MonthlySummary invoices={invoices} />}
+
       {/* Stats Cards */}
       {loading ? <DashboardStatsSkeleton /> : <DashboardStats invoices={invoices} />}
 
@@ -103,4 +107,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

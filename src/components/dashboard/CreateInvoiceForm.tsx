@@ -7,11 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useNoteTemplates } from '@/hooks/useNoteTemplates';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2 } from 'lucide-react';
+import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, BookOpen } from 'lucide-react';
 import { InvoicePreview } from './InvoicePreview';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -27,19 +30,33 @@ export const CreateInvoiceForm = () => {
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // New state for custom exchange rate
+  const [useCustomRate, setUseCustomRate] = useState(false);
+  const [customRate, setCustomRate] = useState('');
+  
+  // New state for invoice prefix
+  const [invoicePrefix, setInvoicePrefix] = useState('');
+  
+  // Note templates state
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const { createInvoice, getConversionRate } = useInvoices();
+  const { templates, addTemplate, deleteTemplate } = useNoteTemplates();
   const navigate = useNavigate();
-  const conversionRate = getConversionRate();
+  
+  const defaultRate = getConversionRate();
+  const activeRate = useCustomRate && customRate ? parseFloat(customRate) : defaultRate;
   
   const senderName = user?.displayName || user?.email?.split('@')[0] || 'Your Name';
 
   const calculateConversion = () => {
     const numAmount = parseFloat(amount) || 0;
     if (currency === 'USD') {
-      return (numAmount * conversionRate).toFixed(2);
+      return (numAmount * activeRate).toFixed(2);
     }
-    return (numAmount / conversionRate).toFixed(2);
+    return (numAmount / activeRate).toFixed(2);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,6 +72,11 @@ export const CreateInvoiceForm = () => {
       return;
     }
 
+    if (useCustomRate && (!customRate || parseFloat(customRate) <= 0)) {
+      toast.error('Please enter a valid exchange rate');
+      return;
+    }
+
     setIsSubmitting(true);
     
     const invoice = await createInvoice({
@@ -67,6 +89,8 @@ export const CreateInvoiceForm = () => {
       dueDate: dueDate.toISOString(),
       senderName,
       notes: notes || undefined,
+      customExchangeRate: useCustomRate ? parseFloat(customRate) : undefined,
+      invoicePrefix: invoicePrefix.trim() || undefined,
     });
 
     if (invoice) {
@@ -77,6 +101,22 @@ export const CreateInvoiceForm = () => {
     }
     
     setIsSubmitting(false);
+  };
+
+  const handleSaveTemplate = () => {
+    if (!newTemplateName.trim() || !notes.trim()) {
+      toast.error('Please enter a template name and notes content');
+      return;
+    }
+    addTemplate(newTemplateName.trim(), notes);
+    toast.success('Template saved!');
+    setNewTemplateName('');
+    setTemplateDialogOpen(false);
+  };
+
+  const handleSelectTemplate = (content: string) => {
+    setNotes(content);
+    toast.success('Template applied');
   };
 
   return (
@@ -115,6 +155,24 @@ export const CreateInvoiceForm = () => {
                 className="bg-background border-border"
               />
               <p className="text-xs text-muted-foreground">The name of your client or their company</p>
+            </div>
+
+            {/* Invoice Number Prefix */}
+            <div className="space-y-2">
+              <Label htmlFor="invoicePrefix" className="text-sm font-medium">
+                Invoice Prefix <span className="text-muted-foreground font-normal">(Optional)</span>
+              </Label>
+              <Input
+                id="invoicePrefix"
+                value={invoicePrefix}
+                onChange={(e) => setInvoicePrefix(e.target.value.toUpperCase())}
+                placeholder="e.g., ACME, PRJ-2026"
+                maxLength={15}
+                className="bg-background border-border"
+              />
+              <p className="text-xs text-muted-foreground">
+                Custom prefix for invoice number (e.g., {invoicePrefix || 'INV'}-2601-001)
+              </p>
             </div>
 
             {/* Date Fields */}
@@ -241,11 +299,45 @@ export const CreateInvoiceForm = () => {
               </div>
             </div>
 
+            {/* Custom Exchange Rate Toggle */}
+            <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Custom Exchange Rate</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Override the default rate</p>
+                </div>
+                <Switch
+                  checked={useCustomRate}
+                  onCheckedChange={setUseCustomRate}
+                />
+              </div>
+              
+              {useCustomRate && (
+                <div className="space-y-2">
+                  <Label htmlFor="customRate" className="text-sm font-medium">
+                    Exchange Rate (1 USD = ? PKR)
+                  </Label>
+                  <Input
+                    id="customRate"
+                    type="number"
+                    value={customRate}
+                    onChange={(e) => setCustomRate(e.target.value)}
+                    placeholder={defaultRate.toString()}
+                    min="0"
+                    step="0.01"
+                    className="bg-background border-border h-10"
+                  />
+                </div>
+              )}
+            </div>
+
             {amount && parseFloat(amount) > 0 && (
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Live Conversion (1 USD = {conversionRate} PKR)</span>
+                  <span>
+                    {useCustomRate ? 'Custom Rate' : 'Auto Rate'}: 1 USD = {activeRate.toFixed(2)} PKR
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 text-lg font-semibold">
                   <span className="text-foreground">
@@ -259,17 +351,95 @@ export const CreateInvoiceForm = () => {
               </div>
             )}
 
-            {/* Notes Field */}
+            {/* Notes Field with Templates */}
             <div className="space-y-2">
-              <Label htmlFor="notes" className="text-sm font-medium">
-                Notes / Payment Instructions <span className="text-muted-foreground font-normal">(Optional)</span>
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="notes" className="text-sm font-medium">
+                  Notes / Payment Instructions <span className="text-muted-foreground font-normal">(Optional)</span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  {templates.length > 0 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          Templates
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="end">
+                        <div className="space-y-1">
+                          {templates.map((template) => (
+                            <div
+                              key={template.id}
+                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 group"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleSelectTemplate(template.content)}
+                                className="text-sm text-foreground text-left flex-1 truncate"
+                              >
+                                {template.name}
+                              </button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                                onClick={() => deleteTemplate(template.id)}
+                              >
+                                <Trash2 className="w-3 h-3 text-destructive" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                  <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+                        <Plus className="w-3.5 h-3.5" />
+                        Save as Template
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Save Note Template</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Template Name</Label>
+                          <Input
+                            value={newTemplateName}
+                            onChange={(e) => setNewTemplateName(e.target.value)}
+                            placeholder="e.g., Bank Transfer Details"
+                          />
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/50 text-sm">
+                          <p className="text-xs text-muted-foreground mb-1">Content to save:</p>
+                          <p className="text-foreground whitespace-pre-wrap">
+                            {notes || <span className="text-muted-foreground italic">Enter notes first...</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleSaveTemplate} disabled={!notes.trim()}>
+                          Save Template
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
               <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g., Bank transfer details, payment terms..."
-                rows={2}
+                rows={3}
                 className="bg-background border-border resize-none"
               />
             </div>
@@ -304,12 +474,13 @@ export const CreateInvoiceForm = () => {
           serviceDescription={serviceDescription}
           amount={parseFloat(amount) || 0}
           currency={currency}
-          conversionRate={conversionRate}
+          conversionRate={activeRate}
           status={status}
           invoiceDate={invoiceDate}
           dueDate={dueDate}
           senderName={senderName}
           notes={notes}
+          invoicePrefix={invoicePrefix}
         />
       </div>
     </div>

@@ -14,4 +14,16 @@ export interface Invoice {
   dueDate: string;
   senderName: string;
   notes?: string;
+  // New fields
+  paidAt?: string;
+  shareId?: string;
+  customExchangeRate?: number;
+  invoicePrefix?: string;
+}
+
+export interface NoteTemplate {
+  id: string;
+  name: string;
+  content: string;
+  createdAt: string;
 }
