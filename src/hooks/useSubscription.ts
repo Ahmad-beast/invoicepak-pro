@@ -5,21 +5,56 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PlanType, PLAN_LIMITS, UserSubscription, LEMON_SQUEEZY_CONFIG } from '@/types/subscription';
 import { toast } from 'sonner';
 
-// Create checkout URL with user metadata
-const createCheckoutUrl = (userId: string, email: string, variantId: string): string => {
-  const checkoutData = {
-    email: email,
-    custom: {
-      user_id: userId,
-    },
-  };
-  
-  // Encode checkout data for URL
-  const encodedData = encodeURIComponent(JSON.stringify(checkoutData));
-  const successUrl = encodeURIComponent(`${window.location.origin}/subscription?success=true`);
-  const cancelUrl = encodeURIComponent(`${window.location.origin}/subscription?cancelled=true`);
-  
-  return `${LEMON_SQUEEZY_CONFIG.checkoutUrl}/${variantId}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${userId}&success_url=${successUrl}&cancel_url=${cancelUrl}`;
+// Create checkout via Vercel serverless function
+const createCheckoutSession = async (userId: string, email: string, variantId: string): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        email,
+        variantId,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Checkout error:', error);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.checkoutUrl;
+  } catch (error) {
+    console.error('Error creating checkout:', error);
+    return null;
+  }
+};
+
+// Get customer portal URL via Vercel serverless function
+const getCustomerPortalUrl = async (userId: string): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/customer-portal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data.portalUrl;
+  } catch (error) {
+    console.error('Error getting portal URL:', error);
+    return null;
+  }
 };
 
 // Initialize user subscription document
@@ -150,32 +185,53 @@ export const useSubscription = () => {
     }
 
     try {
-      // Generate checkout URL with user metadata
-      const checkoutUrl = createCheckoutUrl(
+      toast.loading('Creating checkout session...');
+      
+      // Create checkout via Vercel serverless function
+      const checkoutUrl = await createCheckoutSession(
         user.uid,
         user.email || '',
         LEMON_SQUEEZY_CONFIG.proVariantId
       );
       
-      // Redirect to Lemon Squeezy checkout
-      window.location.href = checkoutUrl;
+      if (checkoutUrl) {
+        // Redirect to Lemon Squeezy checkout
+        window.location.href = checkoutUrl;
+      } else {
+        toast.dismiss();
+        toast.error('Failed to create checkout. Please try again.');
+      }
     } catch (error) {
       console.error('Error creating checkout:', error);
+      toast.dismiss();
       toast.error('Failed to start checkout. Please try again.');
     }
   }, [user]);
 
   const manageSubscription = useCallback(async () => {
-    if (!subscription?.lemonCustomerId) {
-      toast.error('No active subscription found');
+    if (!user) {
+      toast.error('Please log in first');
       return;
     }
 
-    // Redirect to Lemon Squeezy customer portal
-    // The portal URL should be fetched from your Firebase Cloud Function
-    // For now, we'll show a placeholder
-    toast.info('Customer portal coming soon!');
-  }, [subscription]);
+    try {
+      toast.loading('Opening customer portal...');
+      
+      const portalUrl = await getCustomerPortalUrl(user.uid);
+      
+      if (portalUrl) {
+        toast.dismiss();
+        window.open(portalUrl, '_blank');
+      } else {
+        toast.dismiss();
+        toast.error('No active subscription found');
+      }
+    } catch (error) {
+      console.error('Error getting portal:', error);
+      toast.dismiss();
+      toast.error('Failed to open customer portal');
+    }
+  }, [user]);
 
   const canUseFeature = useCallback((feature: 'customExchangeRate' | 'invoiceSharing' | 'removeBranding') => {
     if (!subscription) return false;
