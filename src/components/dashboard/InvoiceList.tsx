@@ -58,11 +58,8 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
   };
 
   const handleCopyShareLink = (invoice: Invoice) => {
-    if (!invoice.shareId) {
-      toast.error('Share link not available');
-      return;
-    }
-    const shareUrl = `${window.location.origin}/invoice/${invoice.shareId}`;
+    // Use document ID directly for sharing
+    const shareUrl = `${window.location.origin}/invoice/${invoice.id}`;
     navigator.clipboard.writeText(shareUrl);
     toast.success('Share link copied to clipboard!');
   };
@@ -160,12 +157,10 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
                   <Download className="w-4 h-4" />
                   Download PDF
                 </DropdownMenuItem>
-                {invoice.shareId && (
-                  <DropdownMenuItem onClick={() => handleCopyShareLink(invoice)} className="gap-2">
-                    <Link2 className="w-4 h-4" />
-                    Copy Share Link
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem onClick={() => handleCopyShareLink(invoice)} className="gap-2">
+                  <Link2 className="w-4 h-4" />
+                  Copy Share Link
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {invoice.status !== 'sent' && (
                   <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'sent')} className="gap-2">

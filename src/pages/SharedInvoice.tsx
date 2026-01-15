@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Invoice } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
@@ -24,22 +24,19 @@ const SharedInvoice = () => {
       }
 
       try {
-        const q = query(
-          collection(db, 'invoices'),
-          where('shareId', '==', shareId)
-        );
-        const snapshot = await getDocs(q);
+        // Fetch directly by document ID (shareId is the invoice document ID)
+        const docRef = doc(db, 'invoices', shareId);
+        const docSnap = await getDoc(docRef);
 
-        if (snapshot.empty) {
+        if (!docSnap.exists()) {
           setError('Invoice not found or link has expired');
           setLoading(false);
           return;
         }
 
-        const doc = snapshot.docs[0];
-        const data = doc.data();
+        const data = docSnap.data();
         setInvoice({
-          id: doc.id,
+          id: docSnap.id,
           ...data,
           createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         } as Invoice);
