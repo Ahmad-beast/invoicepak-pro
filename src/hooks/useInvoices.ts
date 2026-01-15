@@ -81,6 +81,12 @@ export const useInvoices = () => {
   const createInvoice = async (data: Omit<Invoice, 'id' | 'userId' | 'createdAt' | 'invoiceNumber' | 'convertedAmount' | 'conversionRate' | 'shareId'> & { customExchangeRate?: number; invoicePrefix?: string }) => {
     if (!user) return null;
 
+    // FIX: Remove undefined values from data to prevent Firestore crash
+    // Firebase throws error if you try to save 'undefined'
+    const sanitizedData = Object.fromEntries(
+      Object.entries(data).filter(([_, v]) => v !== undefined)
+    );
+
     const conversionRate = data.customExchangeRate || DEFAULT_USD_TO_PKR_RATE;
     const convertedAmount = data.currency === 'USD' 
       ? data.amount * conversionRate 
@@ -88,8 +94,9 @@ export const useInvoices = () => {
 
     try {
       const shareId = generateShareId();
+      
       const docRef = await addDoc(collection(db, 'invoices'), {
-        ...data,
+        ...sanitizedData, // Use clean data here
         userId: user.uid,
         createdAt: serverTimestamp(),
         invoiceNumber: generateInvoiceNumber(data.invoicePrefix),
