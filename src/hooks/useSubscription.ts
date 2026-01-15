@@ -10,7 +10,7 @@ import {
   getRemainingInvoiceCount,
   hasFeatureAccess,
 } from '@/lib/subscription';
-import { createCheckout, getCustomerPortal, LEMON_CONFIG } from '@/lib/lemon';
+import { createCheckout, getCustomerPortal } from '@/lib/lemon';
 import { toast } from 'sonner';
 
 // Initialize user subscription document
@@ -145,21 +145,13 @@ export const useSubscription = () => {
     const toastId = toast.loading('Creating checkout session...');
 
     try {
-      const checkoutUrl = await createCheckout(
-        user.uid,
-        user.email || '',
-        LEMON_CONFIG.proVariantId
-      );
-
-      if (checkoutUrl) {
-        toast.dismiss(toastId);
-        window.location.href = checkoutUrl;
-      } else {
-        toast.error('Failed to create checkout. Please try again.', { id: toastId });
-      }
+      const checkoutUrl = await createCheckout();
+      toast.dismiss(toastId);
+      window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Error creating checkout:', error);
-      toast.error('Failed to start checkout. Please try again.', { id: toastId });
+      const message = error instanceof Error ? error.message : 'Failed to start checkout';
+      toast.error(message, { id: toastId });
     }
   }, [user]);
 

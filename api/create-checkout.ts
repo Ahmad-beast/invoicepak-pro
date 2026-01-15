@@ -1,16 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { initializeApp, getApps, cert, type ServiceAccount } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 
 // Lemon Squeezy API configuration
 const LEMON_API_KEY = process.env.LEMON_API_KEY;
 const LEMON_STORE_ID = process.env.LEMON_STORE_ID;
-const LEMON_PRO_VARIANT_ID = process.env.LEMON_PRO_VARIANT_ID;
+const LEMON_VARIANT_ID = process.env.LEMON_VARIANT_ID;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://invoicepk.lovable.app';
 
-interface CheckoutRequest {
-  userId: string;
-  email: string;
-  variantId?: string;
-}
+// Initialize Firebase Admin SDK (singleton pattern)
+const getFirebaseAdminAuth = () => {
+  if (getApps().length === 0) {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+    if (!serviceAccountJson) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set');
+    }
+
+    const serviceAccount = JSON.parse(serviceAccountJson) as ServiceAccount;
+
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
+  }
+
+  return getAuth();
+};
 
 interface LemonCheckoutResponse {
   data: {
@@ -21,52 +36,73 @@ interface LemonCheckoutResponse {
   };
 }
 
+const getBearerToken = (req: VercelRequest): string | null => {
+  const header = req.headers.authorization;
+  if (!header) return null;
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] || null;
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Logging: incoming body
+  console.log('[Checkout] Incoming body:', req.body);
+
+  // Logging: env vars presence (boolean only)
+  console.log('[Checkout] Env presence:', {
+    hasLemonApiKey: Boolean(LEMON_API_KEY),
+    hasLemonStoreId: Boolean(LEMON_STORE_ID),
+    hasLemonVariantId: Boolean(LEMON_VARIANT_ID),
+    hasAppUrl: Boolean(process.env.NEXT_PUBLIC_APP_URL),
+    hasFirebaseServiceAccount: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT),
+  });
+
   // Validate environment variables
   if (!LEMON_API_KEY) {
-    console.error('Missing LEMON_API_KEY environment variable');
     return res.status(500).json({ error: 'Server configuration error: Missing API key' });
   }
 
   if (!LEMON_STORE_ID) {
-    console.error('Missing LEMON_STORE_ID environment variable');
     return res.status(500).json({ error: 'Server configuration error: Missing store ID' });
   }
 
+  // Variant ID (critical)
+  if (!LEMON_VARIANT_ID) {
+    return res.status(400).json({ error: 'Variant ID missing' });
+  }
+
+  // Auth handling: verify Firebase ID token
+  const token = getBearerToken(req);
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  let userId: string | undefined;
+  let email: string | undefined;
+
   try {
-    const { userId, email, variantId } = req.body as CheckoutRequest;
+    const adminAuth = getFirebaseAdminAuth();
+    const decoded = await adminAuth.verifyIdToken(token);
+    userId = decoded.uid;
+    // decoded.email is optional depending on provider
+    email = typeof decoded.email === 'string' ? decoded.email : undefined;
+  } catch (error) {
+    console.error('[Checkout] Firebase token verification failed:', error);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-    // Validate required fields
-    if (!userId) {
-      return res.status(400).json({ error: 'Missing required field: userId' });
-    }
+  // Validate authenticated user
+  if (!userId || !email) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-    if (!email) {
-      return res.status(400).json({ error: 'Missing required field: email' });
-    }
+  try {
+    console.log(`[Checkout] Creating session for user: ${userId}, email: ${email}`);
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-
-    // Determine variant ID to use
-    const finalVariantId = variantId || LEMON_PRO_VARIANT_ID;
-    
-    if (!finalVariantId) {
-      console.error('No variant ID provided and LEMON_PRO_VARIANT_ID not set');
-      return res.status(500).json({ error: 'Server configuration error: Missing variant ID' });
-    }
-
-    console.log(`[Checkout] Creating session for user: ${userId}, email: ${email}, variant: ${finalVariantId}`);
-
-    // Create checkout session via Lemon Squeezy API
     const response = await fetch('https://api.lemonsqueezy.com/v1/checkouts', {
       method: 'POST',
       headers: {
@@ -90,9 +126,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               embed: false,
             },
             product_options: {
-              ...(Number.isFinite(Number(finalVariantId))
-                ? { enabled_variants: [Number(finalVariantId)] }
-                : {}),
+              enabled_variants: [Number(LEMON_VARIANT_ID)],
               redirect_url: `${APP_URL.replace(/\/$/, '')}/dashboard/subscription?success=true`,
             },
           },
@@ -106,7 +140,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             variant: {
               data: {
                 type: 'variants',
-                id: finalVariantId,
+                id: LEMON_VARIANT_ID,
               },
             },
           },
@@ -114,19 +148,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
+    // Logging: Lemon API response status
+    console.log('[Checkout] Lemon API response status:', response.status);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Checkout] Lemon Squeezy API error:', response.status, errorText);
-      return res.status(response.status).json({
+      const raw = await response.text();
+      console.error('[Checkout] Lemon Squeezy API error:', response.status, raw);
+      return res.status(500).json({
         error: 'Failed to create checkout session',
-        details: errorText,
+        details: raw,
       });
     }
 
     const data: LemonCheckoutResponse = await response.json();
-    const checkoutUrl = data.data.attributes.url;
+    const checkoutUrl = data?.data?.attributes?.url;
 
-    console.log(`[Checkout] Session created successfully for user: ${userId}`);
+    if (!checkoutUrl) {
+      console.error('[Checkout] Missing checkoutUrl in Lemon response:', data);
+      return res.status(500).json({ error: 'Failed to create checkout session', details: 'Missing checkoutUrl' });
+    }
 
     return res.status(200).json({ checkoutUrl });
   } catch (error) {
@@ -134,3 +174,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
