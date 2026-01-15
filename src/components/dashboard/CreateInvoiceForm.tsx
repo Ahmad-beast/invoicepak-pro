@@ -437,10 +437,10 @@ export const CreateInvoiceForm = () => {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Amount</Label>
+                        <Label className="text-xs text-muted-foreground">Amount ({currency === 'USD' ? '$' : '₨'})</Label>
                         <Input
                           type="text"
-                          value={`${currency === 'USD' ? '$' : '₨'}${item.amount.toFixed(2)}`}
+                          value={`${currency === 'USD' ? '$' : '₨'} ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                           disabled
                           className="bg-muted/50 border-border h-9 text-muted-foreground"
                         />
