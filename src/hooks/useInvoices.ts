@@ -12,7 +12,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Invoice } from '@/types/invoice';
+import { Invoice, InvoiceItem } from '@/types/invoice';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -78,7 +78,7 @@ export const useInvoices = () => {
     return crypto.randomUUID().replace(/-/g, '').slice(0, 16);
   };
 
-  const createInvoice = async (data: Omit<Invoice, 'id' | 'userId' | 'createdAt' | 'invoiceNumber' | 'convertedAmount' | 'conversionRate' | 'shareId'> & { customExchangeRate?: number; invoicePrefix?: string }) => {
+  const createInvoice = async (data: Omit<Invoice, 'id' | 'userId' | 'createdAt' | 'invoiceNumber' | 'convertedAmount' | 'conversionRate' | 'shareId'> & { customExchangeRate?: number; invoicePrefix?: string; items?: InvoiceItem[] }) => {
     if (!user) return null;
 
     // FIX: Remove undefined values from data to prevent Firestore crash
@@ -108,6 +108,7 @@ export const useInvoices = () => {
         notes: data.notes || '',
         shareId: shareId,
         paidAt: data.status === 'paid' ? new Date().toISOString() : null,
+        items: data.items || [],
       });
 
       return { id: docRef.id, shareId };
