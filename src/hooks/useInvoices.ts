@@ -14,6 +14,7 @@ import {
 import { db } from '@/lib/firebase';
 import { Invoice } from '@/types/invoice';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const USD_TO_PKR_RATE = 278.50;
 
@@ -103,16 +104,21 @@ export const useInvoices = () => {
   const updateInvoiceStatus = async (id: string, status: Invoice['status']) => {
     try {
       await updateDoc(doc(db, 'invoices', id), { status });
+      const statusLabel = status === 'paid' ? 'paid' : status === 'sent' ? 'sent' : 'draft';
+      toast.success(`Invoice marked as ${statusLabel}`);
     } catch (error) {
       console.error('Error updating invoice:', error);
+      toast.error('Failed to update invoice status');
     }
   };
 
   const deleteInvoice = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'invoices', id));
+      toast.success('Invoice deleted successfully');
     } catch (error) {
       console.error('Error deleting invoice:', error);
+      toast.error('Failed to delete invoice');
     }
   };
 

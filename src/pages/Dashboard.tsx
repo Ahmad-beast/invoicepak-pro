@@ -1,6 +1,8 @@
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
+import { DashboardStatsSkeleton } from '@/components/dashboard/DashboardStatsSkeleton';
 import { InvoiceList } from '@/components/dashboard/InvoiceList';
+import { InvoiceListSkeleton } from '@/components/dashboard/InvoiceListSkeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvoices } from '@/hooks/useInvoices';
 import { Button } from '@/components/ui/button';
@@ -9,7 +11,7 @@ import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { invoices, updateInvoiceStatus, deleteInvoice } = useInvoices();
+  const { invoices, loading, updateInvoiceStatus, deleteInvoice } = useInvoices();
 
   // Should never happen because /dashboard is wrapped in <AuthGate />
   if (!user) return null;
@@ -29,26 +31,27 @@ const Dashboard = () => {
             <p className="text-muted-foreground">Here's an overview of your invoicing activity</p>
           </div>
           <Link to="/dashboard/create">
-            <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all group">
-              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+            <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+              <Plus className="w-4 h-4" />
               New Invoice
             </Button>
           </Link>
         </div>
 
-        {/* Quick Stats Summary */}
-        {invoices.length === 0 ? (
-          <div className="bg-card border border-border rounded-2xl p-8 text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-primary" />
+        {/* Loading State */}
+        {loading ? null : invoices.length === 0 ? (
+          /* Empty State */
+          <div className="bg-card border border-border rounded-2xl p-10 text-center mb-8">
+            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <FileText className="w-10 h-10 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">Create Your First Invoice</h3>
-            <p className="text-muted-foreground max-w-md mx-auto mb-6">
-              Start invoicing your clients professionally with automatic USD to PKR conversion.
+            <h3 className="text-2xl font-semibold text-foreground mb-2">No invoices yet</h3>
+            <p className="text-muted-foreground max-w-md mx-auto mb-8">
+              Create your first invoice to get started with professional invoicing and automatic USD to PKR conversion.
             </p>
             <Link to="/dashboard/create">
-              <Button size="lg" className="gap-2">
-                <Plus className="w-4 h-4" />
+              <Button size="lg" className="gap-2 px-8">
+                <Plus className="w-5 h-5" />
                 Create Invoice
               </Button>
             </Link>
@@ -72,7 +75,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <DashboardStats invoices={invoices} />
+      {loading ? <DashboardStatsSkeleton /> : <DashboardStats invoices={invoices} />}
 
       {/* Invoice List Section */}
       <div className="bg-card border border-border rounded-2xl p-6">
@@ -80,7 +83,7 @@ const Dashboard = () => {
           <div>
             <h2 className="text-xl font-semibold text-foreground">Recent Invoices</h2>
             <p className="text-sm text-muted-foreground">
-              {invoices.length} total invoice{invoices.length !== 1 ? 's' : ''}
+              {loading ? 'Loading...' : `${invoices.length} total invoice${invoices.length !== 1 ? 's' : ''}`}
             </p>
           </div>
           {invoices.length > 5 && (
@@ -89,7 +92,11 @@ const Dashboard = () => {
             </Button>
           )}
         </div>
-        <InvoiceList invoices={invoices} onUpdateStatus={updateInvoiceStatus} onDelete={deleteInvoice} />
+        {loading ? (
+          <InvoiceListSkeleton />
+        ) : (
+          <InvoiceList invoices={invoices} onUpdateStatus={updateInvoiceStatus} onDelete={deleteInvoice} />
+        )}
       </div>
     </DashboardLayout>
   );
