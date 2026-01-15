@@ -22,8 +22,9 @@ const getFirebaseAdmin = () => {
 };
 
 // Verify Lemon Squeezy webhook signature using HMAC SHA256
+// UPDATED: Accepts Buffer instead of string for exact matching
 const verifyWebhookSignature = (
-  payload: string,
+  payload: Buffer,
   signature: string,
   secret: string
 ): boolean => {
@@ -31,7 +32,7 @@ const verifyWebhookSignature = (
     const hmac = crypto.createHmac('sha256', secret);
     const digest = hmac.update(payload).digest('hex');
     
-    // Use timing-safe comparison to prevent timing attacks
+    // Use timing-safe comparison
     if (signature.length !== digest.length) {
       return false;
     }
@@ -40,12 +41,13 @@ const verifyWebhookSignature = (
       Buffer.from(signature, 'hex'),
       Buffer.from(digest, 'hex')
     );
-  } catch {
+  } catch (e) {
+    console.error("Signature verification error:", e);
     return false;
   }
 };
 
-// Subscription event types we handle
+// Subscription event types
 type SubscriptionEventType =
   | 'subscription_created'
   | 'subscription_updated'
@@ -97,28 +99,19 @@ interface LemonSqueezyWebhookPayload {
   };
 }
 
-// Get raw body from request for signature verification
-async function getRawBody(req: VercelRequest): Promise<string> {
-  // If body is already parsed as string, use it
-  if (typeof req.body === 'string') {
-    return req.body;
-  }
-  
-  // If body is an object (already parsed by Vercel), stringify it
-  if (req.body && typeof req.body === 'object') {
-    return JSON.stringify(req.body);
-  }
-  
-  // Read raw body from stream
+// UPDATED: Get raw body as Buffer
+async function getRawBody(req: VercelRequest): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    let data = '';
+    const chunks: Buffer[] = [];
     req.on('data', (chunk) => {
-      data += chunk;
+      chunks.push(Buffer.from(chunk));
     });
     req.on('end', () => {
-      resolve(data);
+      resolve(Buffer.concat(chunks));
     });
-    req.on('error', reject);
+    req.on('error', (err) => {
+      reject(err);
+    });
   });
 }
 
@@ -136,10 +129,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Get the raw body for signature verification
-    const rawBody = await getRawBody(req);
+    // Get the raw body as Buffer
+    const rawBodyBuffer = await getRawBody(req);
+    
+    // Check if body is empty
+    if (rawBodyBuffer.length === 0) {
+        console.error('Empty request body');
+        return res.status(400).json({ error: 'Empty body' });
+    }
 
-    // Get signature from headers (Lemon Squeezy uses X-Signature)
+    // Get signature from headers
     const signature = req.headers['x-signature'] as string;
 
     if (!signature) {
@@ -147,14 +146,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Missing signature' });
     }
 
-    // Verify webhook signature
-    if (!verifyWebhookSignature(rawBody, signature, webhookSecret)) {
+    // Verify webhook signature passing the Buffer
+    if (!verifyWebhookSignature(rawBodyBuffer, signature, webhookSecret)) {
       console.error('Invalid webhook signature');
+      // Debugging help: (Don't log full body in production if sensitive)
+      console.log(`Signature received: ${signature}`);
+      console.log(`Body length: ${rawBodyBuffer.length}`);
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
-    // Parse the webhook payload
-    const payload: LemonSqueezyWebhookPayload = JSON.parse(rawBody);
+    // Parse the webhook payload from the buffer
+    const payload: LemonSqueezyWebhookPayload = JSON.parse(rawBodyBuffer.toString('utf8'));
 
     const eventName = payload.meta.event_name;
     const subscriptionData = payload.data.attributes;
@@ -165,8 +167,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!userId) {
       console.error('[Webhook] No user_id in custom_data');
-      // Return 200 to acknowledge receipt even if we can't process
-      // This prevents Lemon Squeezy from retrying
       return res.status(200).json({ 
         success: false, 
         message: 'No user_id in custom_data - webhook acknowledged but not processed' 
@@ -189,13 +189,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (subscriptionData.status === 'active' || subscriptionData.status === 'on_trial') {
           plan = 'pro';
         } else if (subscriptionData.status === 'paused') {
-          // Keep pro access during pause
           plan = 'pro';
         }
         break;
 
       case 'subscription_cancelled':
-        // User keeps access until end of billing period
         plan = 'pro';
         break;
 
@@ -205,7 +203,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         break;
 
       case 'subscription_paused':
-        // Keep pro during pause but mark status
         plan = 'pro';
         break;
     }
@@ -223,7 +220,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updatedAt: Timestamp.now(),
     };
 
-    // Set currentPeriodEnd based on subscription state
     if (subscriptionData.renews_at) {
       userUpdate.currentPeriodEnd = Timestamp.fromDate(new Date(subscriptionData.renews_at));
     } else if (subscriptionData.ends_at) {
@@ -232,7 +228,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await userRef.set(userUpdate, { merge: true });
 
-    // Also store in subscriptions collection for history/audit
+    // Store in subscriptions collection
     const subscriptionRef = db.collection('subscriptions').doc(subscriptionId);
     await subscriptionRef.set(
       {
@@ -261,7 +257,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('[Webhook] Processing error:', error);
-    // Return 200 to prevent retries for unrecoverable errors
     return res.status(200).json({ 
       success: false, 
       message: 'Error processing webhook - acknowledged' 
@@ -269,7 +264,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Vercel config - disable body parser to get raw body for signature verification
+// Vercel config - IMPORTANT: Disable body parser
 export const config = {
   api: {
     bodyParser: false,
