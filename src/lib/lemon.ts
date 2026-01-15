@@ -37,8 +37,12 @@ export const createCheckout = async (
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Checkout error:', error);
+      const raw = await response.text();
+      try {
+        console.error('Checkout error:', response.status, JSON.parse(raw));
+      } catch {
+        console.error('Checkout error:', response.status, raw);
+      }
       return null;
     }
 

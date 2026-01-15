@@ -79,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           type: 'checkouts',
           attributes: {
             checkout_data: {
-              email: email,
+              email,
               custom: {
                 user_id: userId,
               },
@@ -90,8 +90,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               embed: false,
             },
             product_options: {
-              enabled_variants: [parseInt(finalVariantId, 10)],
-              redirect_url: `${APP_URL}/dashboard/subscription?success=true`,
+              ...(Number.isFinite(Number(finalVariantId))
+                ? { enabled_variants: [Number(finalVariantId)] }
+                : {}),
+              redirect_url: `${APP_URL.replace(/\/$/, '')}/dashboard/subscription?success=true`,
             },
           },
           relationships: {
