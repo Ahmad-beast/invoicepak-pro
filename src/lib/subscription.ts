@@ -55,8 +55,13 @@ const ACTIVE_STATUSES: SubscriptionStatus[] = ['active', 'on_trial', 'paused'];
 
 /**
  * Check if subscription status grants Pro access
+ * Note: We also consider null status as active for Pro users (fallback when webhook sets plan but not status)
  */
-export const isActiveSubscription = (status: SubscriptionStatus | null): boolean => {
+export const isActiveSubscription = (status: SubscriptionStatus | null, plan?: PlanType): boolean => {
+  // If plan is explicitly 'pro', treat as active even if status is null
+  if (plan === 'pro' && status === null) {
+    return true;
+  }
   return status !== null && ACTIVE_STATUSES.includes(status);
 };
 
@@ -68,7 +73,7 @@ export const hasFeatureAccess = (
   status: SubscriptionStatus | null,
   feature: 'customExchangeRate' | 'invoiceSharing' | 'removeBranding'
 ): boolean => {
-  if (plan === 'pro' && isActiveSubscription(status)) {
+  if (plan === 'pro' && isActiveSubscription(status, plan)) {
     return PLAN_LIMITS.pro[feature];
   }
   return PLAN_LIMITS.free[feature];
@@ -82,7 +87,7 @@ export const canCreateMoreInvoices = (
   status: SubscriptionStatus | null,
   currentCount: number
 ): boolean => {
-  if (plan === 'pro' && isActiveSubscription(status)) {
+  if (plan === 'pro' && isActiveSubscription(status, plan)) {
     return true;
   }
   return currentCount < PLAN_LIMITS.free.maxInvoicesPerMonth;
@@ -96,7 +101,7 @@ export const getRemainingInvoiceCount = (
   status: SubscriptionStatus | null,
   currentCount: number
 ): number => {
-  if (plan === 'pro' && isActiveSubscription(status)) {
+  if (plan === 'pro' && isActiveSubscription(status, plan)) {
     return Infinity;
   }
   return Math.max(0, PLAN_LIMITS.free.maxInvoicesPerMonth - currentCount);
@@ -109,5 +114,5 @@ export const isProUser = (
   plan: PlanType,
   status: SubscriptionStatus | null
 ): boolean => {
-  return plan === 'pro' && isActiveSubscription(status);
+  return plan === 'pro' && isActiveSubscription(status, plan);
 };
