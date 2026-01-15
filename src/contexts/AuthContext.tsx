@@ -14,9 +14,21 @@ import { auth } from '@/lib/firebase';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (
+    email: string,
+    password: string,
+    name: string
+  ) => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+
+  /**
+   * Explicit auth initialization state.
+   * While true, protected pages must not render.
+   */
+  isAuthLoading: boolean;
+
+  /** @deprecated Use isAuthLoading */
   isLoading: boolean;
 }
 
@@ -26,12 +38,12 @@ const googleProvider = new GoogleAuthProvider();
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      setIsAuthLoading(false);
     });
 
     return () => unsubscribe();
@@ -92,7 +104,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, signInWithGoogle, logout, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        signup,
+        signInWithGoogle,
+        logout,
+        isAuthLoading,
+        isLoading: isAuthLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
