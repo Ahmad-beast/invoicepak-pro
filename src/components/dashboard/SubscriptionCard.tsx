@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { PLAN_LIMITS } from '@/types/subscription';
+import { PLAN_LIMITS } from '@/lib/subscription';
 
 const PRO_FEATURES = [
   'Unlimited invoices',

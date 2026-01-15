@@ -1,61 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, setDoc, onSnapshot, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { PlanType, PLAN_LIMITS, UserSubscription, LEMON_SQUEEZY_CONFIG } from '@/types/subscription';
+import { 
+  UserSubscription, 
+  PLAN_LIMITS, 
+  isProUser, 
+  canCreateMoreInvoices,
+  getRemainingInvoiceCount,
+  hasFeatureAccess,
+} from '@/lib/subscription';
+import { createCheckout, getCustomerPortal, LEMON_CONFIG } from '@/lib/lemon';
 import { toast } from 'sonner';
-
-// Create checkout via Vercel serverless function
-const createCheckoutSession = async (userId: string, email: string, variantId: string): Promise<string | null> => {
-  try {
-    const response = await fetch('/api/create-checkout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId,
-        email,
-        variantId,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Checkout error:', error);
-      return null;
-    }
-
-    const data = await response.json();
-    return data.checkoutUrl;
-  } catch (error) {
-    console.error('Error creating checkout:', error);
-    return null;
-  }
-};
-
-// Get customer portal URL via Vercel serverless function
-const getCustomerPortalUrl = async (userId: string): Promise<string | null> => {
-  try {
-    const response = await fetch('/api/customer-portal', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId }),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data.portalUrl;
-  } catch (error) {
-    console.error('Error getting portal URL:', error);
-    return null;
-  }
-};
 
 // Initialize user subscription document
 const initializeUserSubscription = async (userId: string, email: string): Promise<UserSubscription> => {
@@ -154,18 +110,20 @@ export const useSubscription = () => {
 
   const canCreateInvoice = useCallback(() => {
     if (!subscription) return false;
-    if (subscription.plan === 'pro' && subscription.subscriptionStatus === 'active') {
-      return true;
-    }
-    return subscription.invoiceCountThisMonth < PLAN_LIMITS.free.maxInvoicesPerMonth;
+    return canCreateMoreInvoices(
+      subscription.plan,
+      subscription.subscriptionStatus,
+      subscription.invoiceCountThisMonth
+    );
   }, [subscription]);
 
   const getRemainingInvoices = useCallback(() => {
     if (!subscription) return 0;
-    if (subscription.plan === 'pro' && subscription.subscriptionStatus === 'active') {
-      return Infinity;
-    }
-    return Math.max(0, PLAN_LIMITS.free.maxInvoicesPerMonth - subscription.invoiceCountThisMonth);
+    return getRemainingInvoiceCount(
+      subscription.plan,
+      subscription.subscriptionStatus,
+      subscription.invoiceCountThisMonth
+    );
   }, [subscription]);
 
   const incrementInvoiceCount = useCallback(async () => {
@@ -184,27 +142,24 @@ export const useSubscription = () => {
       return;
     }
 
+    const toastId = toast.loading('Creating checkout session...');
+
     try {
-      toast.loading('Creating checkout session...');
-      
-      // Create checkout via Vercel serverless function
-      const checkoutUrl = await createCheckoutSession(
+      const checkoutUrl = await createCheckout(
         user.uid,
         user.email || '',
-        LEMON_SQUEEZY_CONFIG.proVariantId
+        LEMON_CONFIG.proVariantId
       );
-      
+
       if (checkoutUrl) {
-        // Redirect to Lemon Squeezy checkout
+        toast.dismiss(toastId);
         window.location.href = checkoutUrl;
       } else {
-        toast.dismiss();
-        toast.error('Failed to create checkout. Please try again.');
+        toast.error('Failed to create checkout. Please try again.', { id: toastId });
       }
     } catch (error) {
       console.error('Error creating checkout:', error);
-      toast.dismiss();
-      toast.error('Failed to start checkout. Please try again.');
+      toast.error('Failed to start checkout. Please try again.', { id: toastId });
     }
   }, [user]);
 
@@ -214,34 +169,35 @@ export const useSubscription = () => {
       return;
     }
 
+    const toastId = toast.loading('Opening customer portal...');
+
     try {
-      toast.loading('Opening customer portal...');
-      
-      const portalUrl = await getCustomerPortalUrl(user.uid);
-      
-      if (portalUrl) {
-        toast.dismiss();
-        window.open(portalUrl, '_blank');
+      const portal = await getCustomerPortal(user.uid);
+
+      if (portal?.portalUrl) {
+        toast.dismiss(toastId);
+        window.open(portal.portalUrl, '_blank');
       } else {
-        toast.dismiss();
-        toast.error('No active subscription found');
+        toast.error('No active subscription found', { id: toastId });
       }
     } catch (error) {
       console.error('Error getting portal:', error);
-      toast.dismiss();
-      toast.error('Failed to open customer portal');
+      toast.error('Failed to open customer portal', { id: toastId });
     }
   }, [user]);
 
   const canUseFeature = useCallback((feature: 'customExchangeRate' | 'invoiceSharing' | 'removeBranding') => {
     if (!subscription) return false;
-    if (subscription.plan === 'pro' && subscription.subscriptionStatus === 'active') {
-      return PLAN_LIMITS.pro[feature];
-    }
-    return PLAN_LIMITS.free[feature];
+    return hasFeatureAccess(
+      subscription.plan,
+      subscription.subscriptionStatus,
+      feature
+    );
   }, [subscription]);
 
-  const isPro = subscription?.plan === 'pro' && subscription?.subscriptionStatus === 'active';
+  const isPro = subscription 
+    ? isProUser(subscription.plan, subscription.subscriptionStatus) 
+    : false;
 
   return {
     subscription,

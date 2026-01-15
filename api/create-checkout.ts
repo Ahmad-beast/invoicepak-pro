@@ -3,15 +3,22 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 // Lemon Squeezy API configuration
 const LEMON_API_KEY = process.env.LEMON_API_KEY;
 const LEMON_STORE_ID = process.env.LEMON_STORE_ID;
+const LEMON_PRO_VARIANT_ID = process.env.LEMON_PRO_VARIANT_ID;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://invoicepk.lovable.app';
-
-// Pro plan variant ID - update this with your actual variant ID from Lemon Squeezy
-const PRO_VARIANT_ID = process.env.LEMON_PRO_VARIANT_ID || 'YOUR_VARIANT_ID';
 
 interface CheckoutRequest {
   userId: string;
   email: string;
   variantId?: string;
+}
+
+interface LemonCheckoutResponse {
+  data: {
+    id: string;
+    attributes: {
+      url: string;
+    };
+  };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -21,17 +28,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Validate environment variables
-  if (!LEMON_API_KEY || !LEMON_STORE_ID) {
-    console.error('Missing Lemon Squeezy configuration');
-    return res.status(500).json({ error: 'Server configuration error' });
+  if (!LEMON_API_KEY) {
+    console.error('Missing LEMON_API_KEY environment variable');
+    return res.status(500).json({ error: 'Server configuration error: Missing API key' });
+  }
+
+  if (!LEMON_STORE_ID) {
+    console.error('Missing LEMON_STORE_ID environment variable');
+    return res.status(500).json({ error: 'Server configuration error: Missing store ID' });
   }
 
   try {
     const { userId, email, variantId } = req.body as CheckoutRequest;
 
     // Validate required fields
-    if (!userId || !email) {
-      return res.status(400).json({ error: 'Missing required fields: userId and email' });
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing required field: userId' });
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: 'Missing required field: email' });
     }
 
     // Validate email format
@@ -40,13 +56,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
+    // Determine variant ID to use
+    const finalVariantId = variantId || LEMON_PRO_VARIANT_ID;
+    
+    if (!finalVariantId) {
+      console.error('No variant ID provided and LEMON_PRO_VARIANT_ID not set');
+      return res.status(500).json({ error: 'Server configuration error: Missing variant ID' });
+    }
+
+    console.log(`[Checkout] Creating session for user: ${userId}, email: ${email}, variant: ${finalVariantId}`);
+
     // Create checkout session via Lemon Squeezy API
     const response = await fetch('https://api.lemonsqueezy.com/v1/checkouts', {
       method: 'POST',
       headers: {
-        'Accept': 'application/vnd.api+json',
+        Accept: 'application/vnd.api+json',
         'Content-Type': 'application/vnd.api+json',
-        'Authorization': `Bearer ${LEMON_API_KEY}`,
+        Authorization: `Bearer ${LEMON_API_KEY}`,
       },
       body: JSON.stringify({
         data: {
@@ -64,8 +90,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               embed: false,
             },
             product_options: {
-              enabled_variants: [parseInt(variantId || PRO_VARIANT_ID)],
-              redirect_url: `${APP_URL}/subscription?success=true`,
+              enabled_variants: [parseInt(finalVariantId, 10)],
+              redirect_url: `${APP_URL}/dashboard/subscription?success=true`,
             },
           },
           relationships: {
@@ -78,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             variant: {
               data: {
                 type: 'variants',
-                id: variantId || PRO_VARIANT_ID,
+                id: finalVariantId,
               },
             },
           },
@@ -87,20 +113,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Lemon Squeezy API error:', errorData);
-      return res.status(response.status).json({ 
+      const errorText = await response.text();
+      console.error('[Checkout] Lemon Squeezy API error:', response.status, errorText);
+      return res.status(response.status).json({
         error: 'Failed to create checkout session',
-        details: errorData 
+        details: errorText,
       });
     }
 
-    const data = await response.json();
+    const data: LemonCheckoutResponse = await response.json();
     const checkoutUrl = data.data.attributes.url;
+
+    console.log(`[Checkout] Session created successfully for user: ${userId}`);
 
     return res.status(200).json({ checkoutUrl });
   } catch (error) {
-    console.error('Error creating checkout:', error);
+    console.error('[Checkout] Unexpected error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
