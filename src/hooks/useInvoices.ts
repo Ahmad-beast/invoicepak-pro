@@ -18,13 +18,13 @@ import { useAuth } from '@/contexts/AuthContext';
 const USD_TO_PKR_RATE = 278.50;
 
 export const useInvoices = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isAuthLoading } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Wait for auth to finish loading before doing anything
-    if (authLoading) {
+    if (isAuthLoading) {
       return;
     }
 
@@ -42,21 +42,27 @@ export const useInvoices = () => {
       orderBy('createdAt', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const invoiceData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-      })) as Invoice[];
-      setInvoices(invoiceData);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching invoices:', error);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const invoiceData = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+          createdAt:
+            docSnap.data().createdAt?.toDate?.()?.toISOString() ||
+            new Date().toISOString(),
+        })) as Invoice[];
+        setInvoices(invoiceData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching invoices:', error);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
-  }, [user, authLoading]);
+  }, [user, isAuthLoading]);
 
   const generateInvoiceNumber = () => {
     const date = new Date();

@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { InvoiceList } from '@/components/dashboard/InvoiceList';
@@ -10,32 +8,14 @@ import { Plus, FileText, TrendingUp, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
-  const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const { invoices, updateInvoiceStatus, deleteInvoice } = useInvoices();
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigate('/login');
-    }
-  }, [user, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <span className="text-muted-foreground">Loading your dashboard...</span>
-        </div>
-      </div>
-    );
-  }
-
+  // Should never happen because /dashboard is wrapped in <AuthGate />
   if (!user) return null;
 
-  const displayName = user?.displayName || user?.email?.split('@')[0] || 'User';
-  const recentInvoices = invoices.slice(0, 5);
-  const pendingCount = invoices.filter(i => i.status !== 'paid').length;
+  const displayName = user.displayName || user.email?.split('@')[0] || 'User';
+  const pendingCount = invoices.filter((i) => i.status !== 'paid').length;
 
   return (
     <DashboardLayout>
@@ -46,9 +26,7 @@ const Dashboard = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
               Welcome back, <span className="text-primary">{displayName}</span>! 👋
             </h1>
-            <p className="text-muted-foreground">
-              Here's an overview of your invoicing activity
-            </p>
+            <p className="text-muted-foreground">Here's an overview of your invoicing activity</p>
           </div>
           <Link to="/dashboard/create">
             <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all group">
@@ -76,25 +54,20 @@ const Dashboard = () => {
             </Link>
           </div>
         ) : (
-          <>
-            {/* Alert for pending invoices */}
-            {pendingCount > 0 && (
-              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Clock className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    You have {pendingCount} pending invoice{pendingCount > 1 ? 's' : ''}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Send reminders to get paid faster
-                  </p>
-                </div>
-                <TrendingUp className="w-5 h-5 text-primary" />
+          pendingCount > 0 && (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Clock className="w-5 h-5 text-primary" />
               </div>
-            )}
-          </>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  You have {pendingCount} pending invoice{pendingCount > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-muted-foreground">Send reminders to get paid faster</p>
+              </div>
+              <TrendingUp className="w-5 h-5 text-primary" />
+            </div>
+          )
         )}
       </div>
 
@@ -116,14 +89,11 @@ const Dashboard = () => {
             </Button>
           )}
         </div>
-        <InvoiceList 
-          invoices={invoices} 
-          onUpdateStatus={updateInvoiceStatus}
-          onDelete={deleteInvoice}
-        />
+        <InvoiceList invoices={invoices} onUpdateStatus={updateInvoiceStatus} onDelete={deleteInvoice} />
       </div>
     </DashboardLayout>
   );
 };
 
 export default Dashboard;
+

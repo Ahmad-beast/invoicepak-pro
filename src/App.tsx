@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthGate } from "@/components/auth/AuthGate";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -27,8 +28,24 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/create" element={<CreateInvoice />} />
+
+            <Route
+              path="/dashboard"
+              element={
+                <AuthGate>
+                  <Dashboard />
+                </AuthGate>
+              }
+            />
+            <Route
+              path="/dashboard/create"
+              element={
+                <AuthGate>
+                  <CreateInvoice />
+                </AuthGate>
+              }
+            />
+
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/cookies" element={<CookieSettings />} />
