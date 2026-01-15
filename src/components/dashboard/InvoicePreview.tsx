@@ -12,6 +12,7 @@ interface InvoicePreviewProps {
   dueDate?: Date;
   senderName?: string;
   notes?: string;
+  invoicePrefix?: string;
 }
 
 export const InvoicePreview = ({
@@ -20,12 +21,13 @@ export const InvoicePreview = ({
   amount,
   currency,
   conversionRate,
-  invoiceNumber = 'INV-PREVIEW',
+  invoiceNumber,
   status = 'draft',
   invoiceDate = new Date(),
   dueDate,
   senderName = 'Your Name',
   notes,
+  invoicePrefix,
 }: InvoicePreviewProps) => {
   const formatCurrency = (value: number, curr: string) => {
     return new Intl.NumberFormat('en-PK', {
@@ -49,6 +51,9 @@ export const InvoicePreview = ({
     }
   };
 
+  // Generate preview invoice number with prefix
+  const previewInvoiceNumber = invoiceNumber || `${invoicePrefix || 'INV'}-PREVIEW`;
+
   return (
     <div className="bg-white text-slate-900 p-6 rounded-lg shadow-lg border border-slate-200 min-h-[500px] text-sm">
       {/* Header */}
@@ -67,7 +72,7 @@ export const InvoicePreview = ({
       <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
         <div>
           <span className="text-slate-500">Invoice #: </span>
-          <span className="font-semibold">{invoiceNumber}</span>
+          <span className="font-semibold">{previewInvoiceNumber}</span>
         </div>
         <div className="text-right">
           <span className="text-slate-500">Invoice Date: </span>

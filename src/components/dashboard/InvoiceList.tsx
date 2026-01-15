@@ -3,10 +3,11 @@ import { Invoice } from '@/types/invoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign } from 'lucide-react';
+import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign, Link2, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -50,17 +51,20 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
     setDownloadingId(invoice.id);
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
-      const completeInvoice: Invoice = {
-        ...invoice,
-        invoiceDate: invoice.invoiceDate || invoice.createdAt,
-        dueDate: invoice.dueDate || invoice.createdAt,
-        senderName: invoice.senderName || 'InvoicePK User',
-        notes: invoice.notes || '',
-      };
-      generateInvoicePDF(completeInvoice);
+      generateInvoicePDF(invoice);
     } finally {
       setDownloadingId(null);
     }
+  };
+
+  const handleCopyShareLink = (invoice: Invoice) => {
+    if (!invoice.shareId) {
+      toast.error('Share link not available');
+      return;
+    }
+    const shareUrl = `${window.location.origin}/invoice/${invoice.shareId}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Share link copied to clipboard!');
   };
 
   if (invoices.length === 0) {
@@ -86,7 +90,7 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
       {invoices.map((invoice) => (
         <div 
           key={invoice.id} 
-          className="group flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-background border border-border hover:border-primary/40 hover:bg-accent/5 cursor-pointer transition-all duration-200"
+          className="group flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-background border border-border hover:border-primary/40 hover:bg-accent/5 transition-all duration-200"
         >
           {/* Invoice Icon & Info */}
           <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -154,8 +158,14 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
                   className="gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  View PDF
+                  Download PDF
                 </DropdownMenuItem>
+                {invoice.shareId && (
+                  <DropdownMenuItem onClick={() => handleCopyShareLink(invoice)} className="gap-2">
+                    <Link2 className="w-4 h-4" />
+                    Copy Share Link
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 {invoice.status !== 'sent' && (
                   <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'sent')} className="gap-2">

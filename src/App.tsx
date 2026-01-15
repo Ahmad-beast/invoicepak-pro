@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import CreateInvoice from "./pages/CreateInvoice";
+import SharedInvoice from "./pages/SharedInvoice";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookieSettings from "./pages/CookieSettings";
@@ -45,6 +46,9 @@ const App = () => (
                 </AuthGate>
               }
             />
+
+            {/* Public shared invoice route */}
+            <Route path="/invoice/:shareId" element={<SharedInvoice />} />
 
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />

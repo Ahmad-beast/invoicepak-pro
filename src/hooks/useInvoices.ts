@@ -16,7 +16,7 @@ import { Invoice } from '@/types/invoice';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const USD_TO_PKR_RATE = 278.50;
+const DEFAULT_USD_TO_PKR_RATE = 278.50;
 
 export const useInvoices = () => {
   const { user, isAuthLoading } = useAuth();
@@ -65,36 +65,45 @@ export const useInvoices = () => {
     return () => unsubscribe();
   }, [user, isAuthLoading]);
 
-  const generateInvoiceNumber = () => {
+  const generateInvoiceNumber = (prefix?: string) => {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `INV-${year}${month}-${random}`;
+    const baseNumber = `${year}${month}-${random}`;
+    return prefix ? `${prefix}-${baseNumber}` : `INV-${baseNumber}`;
   };
 
-  const createInvoice = async (data: Omit<Invoice, 'id' | 'userId' | 'createdAt' | 'invoiceNumber' | 'convertedAmount' | 'conversionRate'>) => {
+  const generateShareId = () => {
+    return crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+  };
+
+  const createInvoice = async (data: Omit<Invoice, 'id' | 'userId' | 'createdAt' | 'invoiceNumber' | 'convertedAmount' | 'conversionRate' | 'shareId'> & { customExchangeRate?: number; invoicePrefix?: string }) => {
     if (!user) return null;
 
+    const conversionRate = data.customExchangeRate || DEFAULT_USD_TO_PKR_RATE;
     const convertedAmount = data.currency === 'USD' 
-      ? data.amount * USD_TO_PKR_RATE 
-      : data.amount / USD_TO_PKR_RATE;
+      ? data.amount * conversionRate 
+      : data.amount / conversionRate;
 
     try {
+      const shareId = generateShareId();
       const docRef = await addDoc(collection(db, 'invoices'), {
         ...data,
         userId: user.uid,
         createdAt: serverTimestamp(),
-        invoiceNumber: generateInvoiceNumber(),
+        invoiceNumber: generateInvoiceNumber(data.invoicePrefix),
         convertedAmount: Math.round(convertedAmount * 100) / 100,
-        conversionRate: USD_TO_PKR_RATE,
+        conversionRate: conversionRate,
         invoiceDate: data.invoiceDate || new Date().toISOString(),
         dueDate: data.dueDate || new Date().toISOString(),
         senderName: data.senderName || '',
         notes: data.notes || '',
+        shareId: shareId,
+        paidAt: data.status === 'paid' ? new Date().toISOString() : null,
       });
 
-      return { id: docRef.id };
+      return { id: docRef.id, shareId };
     } catch (error) {
       console.error('Error creating invoice:', error);
       return null;
@@ -103,7 +112,16 @@ export const useInvoices = () => {
 
   const updateInvoiceStatus = async (id: string, status: Invoice['status']) => {
     try {
-      await updateDoc(doc(db, 'invoices', id), { status });
+      const updateData: Record<string, unknown> = { status };
+      
+      // If marking as paid, set paidAt timestamp
+      if (status === 'paid') {
+        updateData.paidAt = new Date().toISOString();
+      } else {
+        updateData.paidAt = null;
+      }
+      
+      await updateDoc(doc(db, 'invoices', id), updateData);
       const statusLabel = status === 'paid' ? 'paid' : status === 'sent' ? 'sent' : 'draft';
       toast.success(`Invoice marked as ${statusLabel}`);
     } catch (error) {
@@ -122,7 +140,7 @@ export const useInvoices = () => {
     }
   };
 
-  const getConversionRate = () => USD_TO_PKR_RATE;
+  const getConversionRate = () => DEFAULT_USD_TO_PKR_RATE;
 
   return { invoices, loading, createInvoice, updateInvoiceStatus, deleteInvoice, getConversionRate };
 };
