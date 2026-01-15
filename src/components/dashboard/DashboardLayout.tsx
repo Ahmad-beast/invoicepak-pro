@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -11,6 +13,7 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, logout } = useAuth();
+  const { isPro, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -45,7 +48,14 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <FileText className="w-5 h-5 text-primary-foreground" />
             </div>
             {sidebarOpen && (
-              <span className="text-xl font-bold text-foreground">InvoicePK</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-foreground">InvoicePK</span>
+                {!subscriptionLoading && isPro && (
+                  <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 text-xs px-1.5 py-0">
+                    PRO
+                  </Badge>
+                )}
+              </div>
             )}
           </Link>
           <Button
@@ -107,6 +117,11 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <FileText className="w-4 h-4 text-primary-foreground" />
           </div>
           <span className="text-lg font-bold text-foreground">InvoicePK</span>
+          {!subscriptionLoading && isPro && (
+            <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 text-xs px-1.5 py-0">
+              PRO
+            </Badge>
+          )}
         </Link>
         <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
