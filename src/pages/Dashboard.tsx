@@ -5,6 +5,9 @@ import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { InvoiceList } from '@/components/dashboard/InvoiceList';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvoices } from '@/hooks/useInvoices';
+import { Button } from '@/components/ui/button';
+import { Plus, FileText, TrendingUp, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user, isLoading } = useAuth();
@@ -21,8 +24,8 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <span className="text-muted-foreground">Loading...</span>
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <span className="text-muted-foreground">Loading your dashboard...</span>
         </div>
       </div>
     );
@@ -30,15 +33,95 @@ const Dashboard = () => {
 
   if (!user) return null;
 
+  const displayName = user?.displayName || user?.email?.split('@')[0] || 'User';
+  const recentInvoices = invoices.slice(0, 5);
+  const pendingCount = invoices.filter(i => i.status !== 'paid').length;
+
   return (
     <DashboardLayout>
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
+              Welcome back, <span className="text-primary">{displayName}</span>! 👋
+            </h1>
+            <p className="text-muted-foreground">
+              Here's an overview of your invoicing activity
+            </p>
+          </div>
+          <Link to="/dashboard/create">
+            <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all group">
+              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+              New Invoice
+            </Button>
+          </Link>
+        </div>
+
+        {/* Quick Stats Summary */}
+        {invoices.length === 0 ? (
+          <div className="bg-card border border-border rounded-2xl p-8 text-center mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Create Your First Invoice</h3>
+            <p className="text-muted-foreground max-w-md mx-auto mb-6">
+              Start invoicing your clients professionally with automatic USD to PKR conversion.
+            </p>
+            <Link to="/dashboard/create">
+              <Button size="lg" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Create Invoice
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* Alert for pending invoices */}
+            {pendingCount > 0 && (
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Clock className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    You have {pendingCount} pending invoice{pendingCount > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Send reminders to get paid faster
+                  </p>
+                </div>
+                <TrendingUp className="w-5 h-5 text-primary" />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Stats Cards */}
       <DashboardStats invoices={invoices} />
-      <h2 className="text-xl font-semibold text-foreground mb-4">Your Invoices</h2>
-      <InvoiceList 
-        invoices={invoices} 
-        onUpdateStatus={updateInvoiceStatus}
-        onDelete={deleteInvoice}
-      />
+
+      {/* Invoice List Section */}
+      <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Recent Invoices</h2>
+            <p className="text-sm text-muted-foreground">
+              {invoices.length} total invoice{invoices.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          {invoices.length > 5 && (
+            <Button variant="outline" size="sm">
+              View All
+            </Button>
+          )}
+        </div>
+        <InvoiceList 
+          invoices={invoices} 
+          onUpdateStatus={updateInvoiceStatus}
+          onDelete={deleteInvoice}
+        />
+      </div>
     </DashboardLayout>
   );
 };
