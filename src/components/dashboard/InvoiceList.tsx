@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { Invoice } from '@/types/invoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2 } from 'lucide-react';
+import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 
@@ -19,9 +18,9 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
 
   const getStatusColor = (status: Invoice['status']) => {
     switch (status) {
-      case 'paid': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'sent': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      default: return 'bg-muted text-muted-foreground border-border';
+      case 'paid': return 'bg-chart-2/20 text-chart-2 border-chart-2/30';
+      case 'sent': return 'bg-chart-1/20 text-chart-1 border-chart-1/30';
+      default: return 'bg-muted/20 text-muted-foreground border-border';
     }
   };
 
@@ -37,9 +36,7 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
   const handleDownloadPDF = async (invoice: Invoice) => {
     setDownloadingId(invoice.id);
     try {
-      // Small delay to show loading state
       await new Promise(resolve => setTimeout(resolve, 300));
-      // Ensure backward compatibility for invoices without new fields
       const completeInvoice: Invoice = {
         ...invoice,
         invoiceDate: invoice.invoiceDate || invoice.createdAt,
@@ -55,101 +52,95 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
 
   if (invoices.length === 0) {
     return (
-      <Card className="bg-card border-border">
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <FileText className="w-16 h-16 text-muted-foreground/50 mb-4" />
-          <h3 className="text-xl font-semibold text-foreground mb-2">No invoices yet</h3>
-          <p className="text-muted-foreground">Create your first invoice to get started</p>
-        </CardContent>
-      </Card>
+      <div className="text-center py-12">
+        <FileText className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+        <p className="text-muted-foreground">No invoices yet. Create your first one!</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {invoices.map((invoice) => (
-        <Card key={invoice.id} className="bg-card border-border hover:border-primary/30 transition-colors">
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-lg text-foreground">{invoice.clientName}</CardTitle>
-                <p className="text-sm text-muted-foreground">{invoice.invoiceNumber}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge className={getStatusColor(invoice.status)}>
-                  {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                </Badge>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'sent')}>
-                      <Send className="w-4 h-4 mr-2" />
-                      Mark as Sent
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'paid')}>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Mark as Paid
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => onDelete(invoice.id)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+        <div 
+          key={invoice.id} 
+          className="group flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-background border border-border hover:border-primary/30 hover:shadow-md transition-all duration-200"
+        >
+          {/* Invoice Icon & Info */}
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="font-semibold text-foreground truncate">{invoice.clientName}</h4>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span>{invoice.invoiceNumber}</span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {format(new Date(invoice.createdAt), 'MMM d, yyyy')}
+                </span>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-              {invoice.serviceDescription}
-            </p>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <div>
-                  <span className="text-xs text-muted-foreground">Amount</span>
-                  <p className="text-lg font-semibold text-foreground">
-                    {formatCurrency(invoice.amount, invoice.currency)}
-                  </p>
-                </div>
-                <div className="hidden sm:block w-px h-8 bg-border" />
-                <div>
-                  <span className="text-xs text-muted-foreground">
-                    Converted ({invoice.currency === 'USD' ? 'PKR' : 'USD'})
-                  </span>
-                  <p className="text-lg font-semibold text-primary">
-                    {formatCurrency(invoice.convertedAmount, invoice.currency === 'USD' ? 'PKR' : 'USD')}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDownloadPDF(invoice)}
-                  disabled={downloadingId === invoice.id}
-                  className="text-xs"
-                >
-                  {downloadingId === invoice.id ? (
-                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                  ) : (
-                    <Download className="w-3 h-3 mr-1" />
-                  )}
-                  Download PDF
+          </div>
+
+          {/* Amount */}
+          <div className="flex items-center gap-2 sm:min-w-[140px]">
+            <DollarSign className="w-4 h-4 text-muted-foreground" />
+            <div className="text-right">
+              <p className="font-semibold text-foreground">{formatCurrency(invoice.amount, invoice.currency)}</p>
+              {invoice.currency === 'USD' && (
+                <p className="text-xs text-primary">{formatCurrency(invoice.convertedAmount, 'PKR')}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Status Badge */}
+          <Badge className={`${getStatusColor(invoice.status)} border font-medium`}>
+            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+          </Badge>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDownloadPDF(invoice)}
+              disabled={downloadingId === invoice.id}
+              className="gap-2"
+            >
+              {downloadingId === invoice.id ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">PDF</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="w-4 h-4" />
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  {format(new Date(invoice.createdAt), 'MMM dd, yyyy')}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'sent')}>
+                  <Send className="w-4 h-4 mr-2" />
+                  Mark as Sent
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'paid')}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Mark as Paid
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => onDelete(invoice.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       ))}
     </div>
   );
