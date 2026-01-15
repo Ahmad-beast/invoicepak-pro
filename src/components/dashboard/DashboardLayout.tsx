@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft } from 'lucide-react';
+import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +26,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/dashboard/create', label: 'Create Invoice', icon: Plus },
+    { path: '/dashboard/subscription', label: 'Subscription', icon: Crown },
   ];
 
   return (

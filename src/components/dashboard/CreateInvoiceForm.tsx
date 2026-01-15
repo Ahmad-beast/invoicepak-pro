@@ -9,12 +9,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useNoteTemplates } from '@/hooks/useNoteTemplates';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, BookOpen } from 'lucide-react';
+import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, BookOpen, Crown, AlertCircle, Lock } from 'lucide-react';
 import { InvoicePreview } from './InvoicePreview';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -44,12 +46,16 @@ export const CreateInvoiceForm = () => {
 
   const { createInvoice, getConversionRate } = useInvoices();
   const { templates, addTemplate, deleteTemplate } = useNoteTemplates();
+  const { canCreateInvoice, getRemainingInvoices, incrementInvoiceCount, canUseFeature, subscription, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   
   const defaultRate = getConversionRate();
   const activeRate = useCustomRate && customRate ? parseFloat(customRate) : defaultRate;
   
   const senderName = user?.displayName || user?.email?.split('@')[0] || 'Your Name';
+  const canCreate = canCreateInvoice();
+  const remainingInvoices = getRemainingInvoices();
+  const canUseCustomRate = canUseFeature('customExchangeRate');
 
   const calculateConversion = () => {
     const numAmount = parseFloat(amount) || 0;
@@ -61,6 +67,11 @@ export const CreateInvoiceForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!canCreate) {
+      toast.error('You\'ve reached your monthly invoice limit. Upgrade to Pro for unlimited invoices.');
+      return;
+    }
     
     if (!clientName || !serviceDescription || !amount) {
       toast.error('Please fill in all required fields');
@@ -89,11 +100,12 @@ export const CreateInvoiceForm = () => {
       dueDate: dueDate.toISOString(),
       senderName,
       notes: notes || undefined,
-      customExchangeRate: useCustomRate ? parseFloat(customRate) : undefined,
+      customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
       invoicePrefix: invoicePrefix.trim() || undefined,
     });
 
     if (invoice) {
+      await incrementInvoiceCount();
       toast.success('Invoice created successfully!');
       navigate('/dashboard');
     } else {
@@ -121,13 +133,41 @@ export const CreateInvoiceForm = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-      {/* Form Section */}
+      {/* Limit Warning */}
       <Card className="bg-card border-border">
         <CardHeader className="pb-4">
-          <CardTitle className="text-2xl text-foreground">Create New Invoice</CardTitle>
-          <CardDescription>Fill in the details below to generate a professional invoice</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl text-foreground">Create New Invoice</CardTitle>
+              <CardDescription>Fill in the details below to generate a professional invoice</CardDescription>
+            </div>
+            {subscription && remainingInvoices !== Infinity && (
+              <div className={cn(
+                "text-xs font-medium px-3 py-1.5 rounded-full",
+                remainingInvoices > 2 ? "bg-muted text-muted-foreground" : 
+                remainingInvoices > 0 ? "bg-amber-500/15 text-amber-500" : 
+                "bg-destructive/15 text-destructive"
+              )}>
+                {remainingInvoices} invoice{remainingInvoices !== 1 ? 's' : ''} left
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
+          {!canCreate && (
+            <Alert className="mb-6 border-destructive/50 bg-destructive/10">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <AlertDescription className="flex items-center justify-between">
+                <span className="text-destructive">You've reached your monthly limit of 5 invoices.</span>
+                <Link to="/dashboard/subscription">
+                  <Button size="sm" variant="outline" className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
+                    <Crown className="w-3.5 h-3.5" />
+                    Upgrade to Pro
+                  </Button>
+                </Link>
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Sender Name (Read-only) */}
             <div className="space-y-2">
@@ -303,16 +343,31 @@ export const CreateInvoiceForm = () => {
             <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-medium">Custom Exchange Rate</Label>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium">Custom Exchange Rate</Label>
+                    {!canUseCustomRate && (
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Crown className="w-3 h-3" />
+                        Pro
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-0.5">Override the default rate</p>
                 </div>
                 <Switch
-                  checked={useCustomRate}
-                  onCheckedChange={setUseCustomRate}
+                  checked={useCustomRate && canUseCustomRate}
+                  onCheckedChange={(checked) => {
+                    if (!canUseCustomRate) {
+                      toast.error('Custom exchange rate is a Pro feature. Upgrade to unlock.');
+                      return;
+                    }
+                    setUseCustomRate(checked);
+                  }}
+                  disabled={!canUseCustomRate}
                 />
               </div>
               
-              {useCustomRate && (
+              {useCustomRate && canUseCustomRate && (
                 <div className="space-y-2">
                   <Label htmlFor="customRate" className="text-sm font-medium">
                     Exchange Rate (1 USD = ? PKR)
@@ -448,12 +503,17 @@ export const CreateInvoiceForm = () => {
               type="submit" 
               size="lg" 
               className="w-full shadow-lg shadow-primary/20 h-12 text-base font-medium"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !canCreate}
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Creating Invoice...
+                </>
+              ) : !canCreate ? (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Limit Reached
                 </>
               ) : (
                 'Create Invoice'
