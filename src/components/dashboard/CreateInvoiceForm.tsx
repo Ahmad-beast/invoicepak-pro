@@ -20,18 +20,23 @@ import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, B
 import { InvoicePreview } from './InvoicePreview';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { InvoiceItem } from '@/types/invoice';
 
 export const CreateInvoiceForm = () => {
   const { user } = useAuth();
   const [clientName, setClientName] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
-  const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<'USD' | 'PKR'>('USD');
   const [status, setStatus] = useState<'draft' | 'sent' | 'paid'>('draft');
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date());
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Line items state
+  const [items, setItems] = useState<InvoiceItem[]>([
+    { id: crypto.randomUUID(), description: '', quantity: 1, rate: 0, amount: 0 }
+  ]);
   
   // New state for custom exchange rate
   const [useCustomRate, setUseCustomRate] = useState(false);
@@ -57,12 +62,47 @@ export const CreateInvoiceForm = () => {
   const remainingInvoices = getRemainingInvoices();
   const canUseCustomRate = canUseFeature('customExchangeRate');
 
+  // Calculate total amount from items
+  const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
   const calculateConversion = () => {
-    const numAmount = parseFloat(amount) || 0;
     if (currency === 'USD') {
-      return (numAmount * activeRate).toFixed(2);
+      return (totalAmount * activeRate).toFixed(2);
     }
-    return (numAmount / activeRate).toFixed(2);
+    return (totalAmount / activeRate).toFixed(2);
+  };
+
+  // Item management functions
+  const addItem = () => {
+    setItems([
+      ...items,
+      { id: crypto.randomUUID(), description: '', quantity: 1, rate: 0, amount: 0 }
+    ]);
+  };
+
+  const removeItem = (id: string) => {
+    if (items.length === 1) {
+      toast.error('At least one item is required');
+      return;
+    }
+    setItems(items.filter(item => item.id !== id));
+  };
+
+  const updateItem = (id: string, field: keyof InvoiceItem, value: string | number) => {
+    setItems(items.map(item => {
+      if (item.id !== id) return item;
+      
+      const updatedItem = { ...item, [field]: value };
+      
+      // Auto-calculate amount when quantity or rate changes
+      if (field === 'quantity' || field === 'rate') {
+        const qty = field === 'quantity' ? Number(value) : item.quantity;
+        const rate = field === 'rate' ? Number(value) : item.rate;
+        updatedItem.amount = qty * rate;
+      }
+      
+      return updatedItem;
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,13 +113,20 @@ export const CreateInvoiceForm = () => {
       return;
     }
     
-    if (!clientName || !serviceDescription || !amount) {
-      toast.error('Please fill in all required fields');
+    if (!clientName) {
+      toast.error('Please enter a client name');
       return;
     }
 
     if (!dueDate) {
       toast.error('Please select a due date');
+      return;
+    }
+
+    // Validate items
+    const validItems = items.filter(item => item.description.trim() && item.amount > 0);
+    if (validItems.length === 0) {
+      toast.error('Please add at least one item with a description and valid amount');
       return;
     }
 
@@ -93,7 +140,7 @@ export const CreateInvoiceForm = () => {
     const invoice = await createInvoice({
       clientName,
       serviceDescription,
-      amount: parseFloat(amount),
+      amount: totalAmount,
       currency,
       status,
       invoiceDate: invoiceDate.toISOString(),
@@ -102,6 +149,7 @@ export const CreateInvoiceForm = () => {
       notes: notes || undefined,
       customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
       invoicePrefix: invoicePrefix.trim() || undefined,
+      items: validItems,
     });
 
     if (invoice) {
@@ -293,50 +341,116 @@ export const CreateInvoiceForm = () => {
               <p className="text-xs text-muted-foreground">Set initial invoice status</p>
             </div>
 
+            {/* Project Title / Summary */}
             <div className="space-y-2">
               <Label htmlFor="serviceDescription" className="text-sm font-medium">
-                Service Description <span className="text-destructive">*</span>
+                Project Title / Summary <span className="text-muted-foreground font-normal">(Optional)</span>
               </Label>
               <Textarea
                 id="serviceDescription"
                 value={serviceDescription}
                 onChange={(e) => setServiceDescription(e.target.value)}
-                placeholder="e.g., Website development and design services..."
-                rows={3}
+                placeholder="e.g., Website Development Project - Phase 1"
+                rows={2}
                 className="bg-background border-border resize-none"
               />
-              <p className="text-xs text-muted-foreground">Describe the work or services provided</p>
+              <p className="text-xs text-muted-foreground">A brief description or title for this invoice</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="amount" className="text-sm font-medium">
-                  Amount <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                  className="bg-background border-border h-10"
-                />
-              </div>
+            {/* Currency Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
+              <Select value={currency} onValueChange={(v) => setCurrency(v as 'USD' | 'PKR')}>
+                <SelectTrigger className="bg-background border-border h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="PKR">PKR (₨)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
-                <Select value={currency} onValueChange={(v) => setCurrency(v as 'USD' | 'PKR')}>
-                  <SelectTrigger className="bg-background border-border h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD ($)</SelectItem>
-                    <SelectItem value="PKR">PKR (₨)</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Line Items Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">
+                  Line Items <span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addItem}
+                  className="h-8 gap-1 text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Item
+                </Button>
               </div>
+              
+              <div className="space-y-3">
+                {items.map((item, index) => (
+                  <div key={item.id} className="p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Item {index + 1}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => removeItem(item.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Description (e.g., Website Design)"
+                        value={item.description}
+                        onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                        className="bg-background border-border"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Qty</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                          className="bg-background border-border h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Rate ({currency === 'USD' ? '$' : '₨'})</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.rate}
+                          onChange={(e) => updateItem(item.id, 'rate', parseFloat(e.target.value) || 0)}
+                          className="bg-background border-border h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Amount</Label>
+                        <Input
+                          type="text"
+                          value={`${currency === 'USD' ? '$' : '₨'}${item.amount.toFixed(2)}`}
+                          disabled
+                          className="bg-muted/50 border-border h-9 text-muted-foreground"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <p className="text-xs text-muted-foreground">Add items with description, quantity, and rate. Amount is calculated automatically.</p>
             </div>
 
             {/* Custom Exchange Rate Toggle */}
@@ -386,7 +500,7 @@ export const CreateInvoiceForm = () => {
               )}
             </div>
 
-            {amount && parseFloat(amount) > 0 && (
+            {totalAmount > 0 && (
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                   <RefreshCw className="w-3.5 h-3.5" />
@@ -396,7 +510,7 @@ export const CreateInvoiceForm = () => {
                 </div>
                 <div className="flex items-center gap-3 text-lg font-semibold">
                   <span className="text-foreground">
-                    {currency === 'USD' ? '$' : '₨'}{parseFloat(amount).toFixed(2)} {currency}
+                    {currency === 'USD' ? '$' : '₨'}{totalAmount.toFixed(2)} {currency}
                   </span>
                   <ArrowRight className="w-4 h-4 text-primary" />
                   <span className="text-primary">
@@ -532,7 +646,7 @@ export const CreateInvoiceForm = () => {
         <InvoicePreview
           clientName={clientName}
           serviceDescription={serviceDescription}
-          amount={parseFloat(amount) || 0}
+          amount={totalAmount}
           currency={currency}
           conversionRate={activeRate}
           status={status}
@@ -541,6 +655,7 @@ export const CreateInvoiceForm = () => {
           senderName={senderName}
           notes={notes}
           invoicePrefix={invoicePrefix}
+          items={items}
         />
       </div>
     </div>

@@ -1,8 +1,16 @@
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
+
 export interface Invoice {
   id: string;
   userId: string;
   clientName: string;
-  serviceDescription: string;
+  serviceDescription: string; // Now used as "Project Title / Summary"
   amount: number;
   currency: 'USD' | 'PKR';
   convertedAmount: number;
@@ -19,6 +27,8 @@ export interface Invoice {
   shareId?: string;
   customExchangeRate?: number;
   invoicePrefix?: string;
+  // Multiple line items
+  items?: InvoiceItem[];
 }
 
 export interface NoteTemplate {

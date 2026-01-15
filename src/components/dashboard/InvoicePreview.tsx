@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { InvoiceItem } from '@/types/invoice';
 
 interface InvoicePreviewProps {
   clientName: string;
@@ -13,6 +14,7 @@ interface InvoicePreviewProps {
   senderName?: string;
   notes?: string;
   invoicePrefix?: string;
+  items?: InvoiceItem[];
 }
 
 export const InvoicePreview = ({
@@ -28,6 +30,7 @@ export const InvoicePreview = ({
   senderName = 'Your Name',
   notes,
   invoicePrefix,
+  items = [],
 }: InvoicePreviewProps) => {
   const formatCurrency = (value: number, curr: string) => {
     return new Intl.NumberFormat('en-PK', {
@@ -38,9 +41,14 @@ export const InvoicePreview = ({
     }).format(value);
   };
 
+  // Calculate total from items if available, otherwise use amount prop
+  const totalAmount = items.length > 0 
+    ? items.reduce((sum, item) => sum + item.amount, 0) 
+    : amount;
+
   const convertedAmount = currency === 'USD' 
-    ? amount * conversionRate 
-    : amount / conversionRate;
+    ? totalAmount * conversionRate 
+    : totalAmount / conversionRate;
   const convertedCurrency = currency === 'USD' ? 'PKR' : 'USD';
 
   const getStatusColor = () => {
@@ -104,13 +112,54 @@ export const InvoicePreview = ({
         </div>
       </div>
       
-      {/* Service Description */}
+      {/* Project Description / Subject */}
+      {serviceDescription && (
+        <div className="mb-4">
+          <p className="text-xs font-bold text-orange-500 mb-1">PROJECT DESCRIPTION</p>
+          <div className="h-px bg-slate-200 mb-2" />
+          <p className="text-slate-700 whitespace-pre-wrap text-xs leading-relaxed">
+            {serviceDescription}
+          </p>
+        </div>
+      )}
+      
+      {/* Items Table */}
       <div className="mb-4">
-        <p className="text-xs font-bold text-orange-500 mb-1">SERVICE DESCRIPTION</p>
+        <p className="text-xs font-bold text-orange-500 mb-1">ITEMS</p>
         <div className="h-px bg-slate-200 mb-2" />
-        <p className="text-slate-700 whitespace-pre-wrap text-xs leading-relaxed">
-          {serviceDescription || <span className="text-slate-400 italic">Service description...</span>}
-        </p>
+        
+        {items.length > 0 ? (
+          <div className="overflow-hidden rounded-lg border border-slate-200">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="text-left p-2 font-semibold text-slate-600">Description</th>
+                  <th className="text-center p-2 font-semibold text-slate-600 w-16">Qty</th>
+                  <th className="text-right p-2 font-semibold text-slate-600 w-20">Rate</th>
+                  <th className="text-right p-2 font-semibold text-slate-600 w-24">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => (
+                  <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                    <td className="p-2 text-slate-700">
+                      {item.description || <span className="text-slate-400 italic">No description</span>}
+                    </td>
+                    <td className="p-2 text-center text-slate-700">{item.quantity}</td>
+                    <td className="p-2 text-right text-slate-700">
+                      {formatCurrency(item.rate, currency)}
+                    </td>
+                    <td className="p-2 text-right font-medium text-slate-900">
+                      {formatCurrency(item.amount, currency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-slate-400 italic text-xs">No items added yet...</p>
+        )}
       </div>
       
       {/* Amount Section */}
@@ -118,9 +167,9 @@ export const InvoicePreview = ({
       
       <div className="bg-slate-50 rounded-lg p-3 mb-3 text-xs">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-slate-500">Amount ({currency})</span>
+          <span className="text-slate-500">Subtotal ({currency})</span>
           <span className="text-sm font-bold text-slate-900">
-            {amount > 0 ? formatCurrency(amount, currency) : '--'}
+            {totalAmount > 0 ? formatCurrency(totalAmount, currency) : '--'}
           </span>
         </div>
         
@@ -132,7 +181,7 @@ export const InvoicePreview = ({
         <div className="flex justify-between items-center">
           <span className="text-slate-500">Converted Amount ({convertedCurrency})</span>
           <span className="text-sm font-bold text-orange-500">
-            {amount > 0 ? formatCurrency(convertedAmount, convertedCurrency) : '--'}
+            {totalAmount > 0 ? formatCurrency(convertedAmount, convertedCurrency) : '--'}
           </span>
         </div>
       </div>
@@ -141,7 +190,7 @@ export const InvoicePreview = ({
       <div className="bg-orange-500 text-white rounded-lg p-3 flex justify-between items-center mb-4">
         <span className="font-bold text-sm">TOTAL AMOUNT</span>
         <span className="text-lg font-bold">
-          {amount > 0 ? formatCurrency(amount, currency) : '--'}
+          {totalAmount > 0 ? formatCurrency(totalAmount, currency) : '--'}
         </span>
       </div>
       
