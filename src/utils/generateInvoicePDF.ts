@@ -151,8 +151,8 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   
   yPosition += boxHeight + 6;
   
-  // Service Description Section
-  addText('SERVICE DESCRIPTION', margin, yPosition, { 
+  // Project Title / Service Description Section
+  addText('PROJECT DESCRIPTION', margin, yPosition, { 
     fontSize: 7, 
     color: accentColor, 
     fontStyle: 'bold' 
@@ -167,14 +167,75 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   doc.setTextColor(...darkText);
   doc.setFont('helvetica', 'normal');
   const splitDescription = doc.splitTextToSize(invoice.serviceDescription, contentWidth);
-  const maxLines = 4; // Limit lines to keep A5 compact
+  const maxLines = 3; // Limit lines to keep A5 compact
   const truncatedDescription = splitDescription.slice(0, maxLines);
   doc.text(truncatedDescription, margin, yPosition);
-  yPosition += truncatedDescription.length * 4 + 8;
+  yPosition += truncatedDescription.length * 4 + 6;
+  
+  // Line Items Table Section
+  const hasItems = invoice.items && invoice.items.length > 0;
+  const currencySymbol = invoice.currency === 'USD' ? '$' : '₨';
+  
+  if (hasItems) {
+    addText('LINE ITEMS', margin, yPosition, { 
+      fontSize: 7, 
+      color: accentColor, 
+      fontStyle: 'bold' 
+    });
+    
+    yPosition += 4;
+    
+    // Table Header
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, yPosition - 2, contentWidth, 7, 1, 1, 'F');
+    
+    const descCol = margin + 2;
+    const qtyCol = margin + 70;
+    const rateCol = margin + 85;
+    const amountCol = pageWidth - margin - 2;
+    
+    addText('Description', descCol, yPosition + 3, { fontSize: 6, color: grayText, fontStyle: 'bold' });
+    addText('Qty', qtyCol, yPosition + 3, { fontSize: 6, color: grayText, fontStyle: 'bold' });
+    addText(`Rate (${currencySymbol})`, rateCol, yPosition + 3, { fontSize: 6, color: grayText, fontStyle: 'bold' });
+    addText(`Amount (${currencySymbol})`, amountCol, yPosition + 3, { fontSize: 6, color: grayText, fontStyle: 'bold', align: 'right' });
+    
+    yPosition += 8;
+    
+    // Table Rows
+    invoice.items!.forEach((item, index) => {
+      if (yPosition > pageHeight - 50) return; // Prevent overflow
+      
+      // Alternate row background
+      if (index % 2 === 0) {
+        doc.setFillColor(252, 252, 253);
+        doc.rect(margin, yPosition - 3, contentWidth, 7, 'F');
+      }
+      
+      // Truncate long descriptions
+      const maxDescLength = 40;
+      const truncatedItemDesc = item.description.length > maxDescLength 
+        ? item.description.substring(0, maxDescLength) + '...' 
+        : item.description;
+      
+      addText(truncatedItemDesc, descCol, yPosition + 1, { fontSize: 7 });
+      addText(item.quantity.toString(), qtyCol, yPosition + 1, { fontSize: 7 });
+      addText(item.rate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), rateCol, yPosition + 1, { fontSize: 7 });
+      addText(`${currencySymbol} ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, amountCol, yPosition + 1, { fontSize: 7, align: 'right' });
+      
+      yPosition += 7;
+    });
+    
+    yPosition += 4;
+  }
   
   // Amount Section
   addLine(yPosition);
   yPosition += 6;
+  
+  // Calculate total from items or use invoice amount
+  const totalAmount = hasItems 
+    ? invoice.items!.reduce((sum, item) => sum + item.amount, 0) 
+    : invoice.amount;
   
   // Amount breakdown box
   doc.setFillColor(248, 250, 252);
@@ -185,7 +246,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     fontSize: 7, 
     color: grayText 
   });
-  addText(formatCurrency(invoice.amount, invoice.currency), pageWidth - margin - 4, yPosition + 3, { 
+  addText(formatCurrency(totalAmount, invoice.currency), pageWidth - margin - 4, yPosition + 3, { 
     fontSize: 10, 
     fontStyle: 'bold',
     align: 'right'
@@ -207,11 +268,14 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   
   // Converted Amount
   const convertedCurrency = invoice.currency === 'USD' ? 'PKR' : 'USD';
+  const convertedAmount = invoice.currency === 'USD' 
+    ? totalAmount * invoice.conversionRate 
+    : totalAmount / invoice.conversionRate;
   addText(`Converted Amount (${convertedCurrency})`, margin + 4, yPosition, { 
     fontSize: 7, 
     color: grayText 
   });
-  addText(formatCurrency(invoice.convertedAmount, convertedCurrency), pageWidth - margin - 4, yPosition, { 
+  addText(formatCurrency(convertedAmount, convertedCurrency), pageWidth - margin - 4, yPosition, { 
     fontSize: 10, 
     fontStyle: 'bold',
     color: accentColor,
@@ -230,7 +294,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   doc.text('TOTAL AMOUNT', margin + 4, yPosition + 9);
   
   doc.setFontSize(12);
-  doc.text(formatCurrency(invoice.amount, invoice.currency), pageWidth - margin - 4, yPosition + 9, { align: 'right' });
+  doc.text(formatCurrency(totalAmount, invoice.currency), pageWidth - margin - 4, yPosition + 9, { align: 'right' });
   
   yPosition += 20;
   
