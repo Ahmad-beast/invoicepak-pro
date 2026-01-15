@@ -11,7 +11,7 @@ import { useInvoices } from '@/hooks/useInvoices';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, RefreshCw, FileText, CalendarIcon } from 'lucide-react';
+import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2 } from 'lucide-react';
 import { InvoicePreview } from './InvoicePreview';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -83,44 +83,52 @@ export const CreateInvoiceForm = () => {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
       {/* Form Section */}
       <Card className="bg-card border-border">
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle className="text-2xl text-foreground">Create New Invoice</CardTitle>
-          <CardDescription>Fill in the details to generate a professional invoice</CardDescription>
+          <CardDescription>Fill in the details below to generate a professional invoice</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Sender Name (Read-only) */}
             <div className="space-y-2">
-              <Label htmlFor="senderName">From (Sender)</Label>
+              <Label htmlFor="senderName" className="text-sm font-medium">
+                From (Sender)
+              </Label>
               <Input
                 id="senderName"
                 value={senderName}
                 disabled
-                className="bg-muted border-border"
+                className="bg-muted/50 border-border text-muted-foreground"
               />
+              <p className="text-xs text-muted-foreground">This is pulled from your account</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name *</Label>
+              <Label htmlFor="clientName" className="text-sm font-medium">
+                Client Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="clientName"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                placeholder="Enter client or company name"
+                placeholder="e.g., Acme Corporation"
                 className="bg-background border-border"
               />
+              <p className="text-xs text-muted-foreground">The name of your client or their company</p>
             </div>
 
             {/* Date Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Invoice Date *</Label>
+                <Label className="text-sm font-medium">
+                  Invoice Date <span className="text-destructive">*</span>
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal bg-background border-border",
+                        "w-full justify-start text-left font-normal bg-background border-border h-10",
                         !invoiceDate && "text-muted-foreground"
                       )}
                     >
@@ -141,18 +149,20 @@ export const CreateInvoiceForm = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>Due Date *</Label>
+                <Label className="text-sm font-medium">
+                  Due Date <span className="text-destructive">*</span>
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal bg-background border-border",
+                        "w-full justify-start text-left font-normal bg-background border-border h-10",
                         !dueDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                      {dueDate ? format(dueDate, "PPP") : <span>Select due date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -165,14 +175,15 @@ export const CreateInvoiceForm = () => {
                     />
                   </PopoverContent>
                 </Popover>
+                <p className="text-xs text-muted-foreground">When payment is expected</p>
               </div>
             </div>
 
             {/* Status Selector */}
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status" className="text-sm font-medium">Status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as 'draft' | 'sent' | 'paid')}>
-                <SelectTrigger className="bg-background border-border">
+                <SelectTrigger className="bg-background border-border h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -181,23 +192,29 @@ export const CreateInvoiceForm = () => {
                   <SelectItem value="paid">Paid</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">Set initial invoice status</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="serviceDescription">Service Description *</Label>
+              <Label htmlFor="serviceDescription" className="text-sm font-medium">
+                Service Description <span className="text-destructive">*</span>
+              </Label>
               <Textarea
                 id="serviceDescription"
                 value={serviceDescription}
                 onChange={(e) => setServiceDescription(e.target.value)}
-                placeholder="Describe the services provided..."
+                placeholder="e.g., Website development and design services..."
                 rows={3}
                 className="bg-background border-border resize-none"
               />
+              <p className="text-xs text-muted-foreground">Describe the work or services provided</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount *</Label>
+                <Label htmlFor="amount" className="text-sm font-medium">
+                  Amount <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="amount"
                   type="number"
@@ -206,14 +223,14 @@ export const CreateInvoiceForm = () => {
                   placeholder="0.00"
                   min="0"
                   step="0.01"
-                  className="bg-background border-border"
+                  className="bg-background border-border h-10"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
+                <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
                 <Select value={currency} onValueChange={(v) => setCurrency(v as 'USD' | 'PKR')}>
-                  <SelectTrigger className="bg-background border-border">
+                  <SelectTrigger className="bg-background border-border h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -225,16 +242,16 @@ export const CreateInvoiceForm = () => {
             </div>
 
             {amount && parseFloat(amount) > 0 && (
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Live Conversion (Rate: 1 USD = {conversionRate} PKR)</span>
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Live Conversion (1 USD = {conversionRate} PKR)</span>
                 </div>
                 <div className="flex items-center gap-3 text-lg font-semibold">
                   <span className="text-foreground">
                     {currency === 'USD' ? '$' : '₨'}{parseFloat(amount).toFixed(2)} {currency}
                   </span>
-                  <ArrowRight className="w-5 h-5 text-primary" />
+                  <ArrowRight className="w-4 h-4 text-primary" />
                   <span className="text-primary">
                     {currency === 'USD' ? '₨' : '$'}{calculateConversion()} {currency === 'USD' ? 'PKR' : 'USD'}
                   </span>
@@ -244,12 +261,14 @@ export const CreateInvoiceForm = () => {
 
             {/* Notes Field */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes / Payment Instructions (Optional)</Label>
+              <Label htmlFor="notes" className="text-sm font-medium">
+                Notes / Payment Instructions <span className="text-muted-foreground font-normal">(Optional)</span>
+              </Label>
               <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add payment instructions or additional notes..."
+                placeholder="e.g., Bank transfer details, payment terms..."
                 rows={2}
                 className="bg-background border-border resize-none"
               />
@@ -258,17 +277,24 @@ export const CreateInvoiceForm = () => {
             <Button 
               type="submit" 
               size="lg" 
-              className="w-full shadow-lg shadow-primary/25"
+              className="w-full shadow-lg shadow-primary/20 h-12 text-base font-medium"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Create Invoice'}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating Invoice...
+                </>
+              ) : (
+                'Create Invoice'
+              )}
             </Button>
           </form>
         </CardContent>
       </Card>
 
       {/* Live Preview Section */}
-      <div className="space-y-4">
+      <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
         <div className="flex items-center gap-2 text-muted-foreground">
           <FileText className="w-5 h-5" />
           <span className="font-medium">Live Preview</span>
