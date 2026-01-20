@@ -13,15 +13,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useNoteTemplates } from '@/hooks/useNoteTemplates';
+import { useInvoiceTemplates } from '@/hooks/useInvoiceTemplates';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, BookOpen, Crown, AlertCircle, Lock, Upload, X, Building2 } from 'lucide-react';
 import { InvoicePreview } from './InvoicePreview';
-import { format } from 'date-fns';
+import { InvoiceTemplateManager } from './InvoiceTemplateManager';
+import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { InvoiceItem } from '@/types/invoice';
+import { InvoiceItem, InvoiceTemplate } from '@/types/invoice';
 
 export const CreateInvoiceForm = () => {
   const { user } = useAuth();
@@ -56,7 +58,7 @@ export const CreateInvoiceForm = () => {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const { createInvoice, getConversionRate } = useInvoices();
-  const { templates, addTemplate, deleteTemplate } = useNoteTemplates();
+  const { templates: noteTemplates, addTemplate: addNoteTemplate, deleteTemplate: deleteNoteTemplate } = useNoteTemplates();
   const { canCreateInvoice, getRemainingInvoices, incrementInvoiceCount, canUseFeature, subscription, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   
@@ -68,6 +70,23 @@ export const CreateInvoiceForm = () => {
   const remainingInvoices = getRemainingInvoices();
   const canUseCustomRate = canUseFeature('customExchangeRate');
   const isPro = subscription?.plan === 'pro';
+
+  // Payment terms state for template functionality
+  const [paymentTermsDays, setPaymentTermsDays] = useState<number | undefined>(undefined);
+
+  // Handle applying an invoice template
+  const handleApplyInvoiceTemplate = (template: InvoiceTemplate) => {
+    if (template.companyName) setCompanyName(template.companyName);
+    if (template.companyLogo) setCompanyLogo(template.companyLogo);
+    if (template.invoicePrefix) setInvoicePrefix(template.invoicePrefix);
+    if (template.currency) setCurrency(template.currency);
+    if (template.notes) setNotes(template.notes);
+    if (template.paymentTermsDays) {
+      setPaymentTermsDays(template.paymentTermsDays);
+      // Also set the due date based on payment terms
+      setDueDate(addDays(invoiceDate, template.paymentTermsDays));
+    }
+  };
 
   // Handle logo upload
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -203,12 +222,12 @@ export const CreateInvoiceForm = () => {
     setIsSubmitting(false);
   };
 
-  const handleSaveTemplate = () => {
+  const handleSaveNoteTemplate = () => {
     if (!newTemplateName.trim() || !notes.trim()) {
       toast.error('Please enter a template name and notes content');
       return;
     }
-    addTemplate(newTemplateName.trim(), notes);
+    addNoteTemplate(newTemplateName.trim(), notes);
     toast.success('Template saved!');
     setNewTemplateName('');
     setTemplateDialogOpen(false);
@@ -257,6 +276,32 @@ export const CreateInvoiceForm = () => {
             </Alert>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Invoice Templates (Pro Feature) */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Invoice Templates</span>
+                {!isPro && (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Crown className="w-3 h-3" />
+                    Pro
+                  </span>
+                )}
+              </div>
+              <InvoiceTemplateManager
+                isPro={isPro}
+                onApplyTemplate={handleApplyInvoiceTemplate}
+                currentValues={{
+                  companyName,
+                  companyLogo,
+                  invoicePrefix,
+                  currency,
+                  notes,
+                  paymentTermsDays,
+                }}
+              />
+            </div>
+
             {/* Company Branding Section (Pro Feature) */}
             <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-4">
               <div className="flex items-center justify-between">
@@ -673,7 +718,7 @@ export const CreateInvoiceForm = () => {
                   Notes / Payment Instructions <span className="text-muted-foreground font-normal">(Optional)</span>
                 </Label>
                 <div className="flex items-center gap-2">
-                  {templates.length > 0 && (
+                  {noteTemplates.length > 0 && (
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs">
@@ -683,7 +728,7 @@ export const CreateInvoiceForm = () => {
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-2" align="end">
                         <div className="space-y-1">
-                          {templates.map((template) => (
+                          {noteTemplates.map((template) => (
                             <div
                               key={template.id}
                               className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 group"
@@ -700,7 +745,7 @@ export const CreateInvoiceForm = () => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                                onClick={() => deleteTemplate(template.id)}
+                                onClick={() => deleteNoteTemplate(template.id)}
                               >
                                 <Trash2 className="w-3 h-3 text-destructive" />
                               </Button>
@@ -741,7 +786,7 @@ export const CreateInvoiceForm = () => {
                         <DialogClose asChild>
                           <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button onClick={handleSaveTemplate} disabled={!notes.trim()}>
+                        <Button onClick={handleSaveNoteTemplate} disabled={!notes.trim()}>
                           Save Template
                         </Button>
                       </DialogFooter>
