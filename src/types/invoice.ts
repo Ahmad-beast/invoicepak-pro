@@ -40,3 +40,19 @@ export interface NoteTemplate {
   content: string;
   createdAt: string;
 }
+
+export interface InvoiceTemplate {
+  id: string;
+  name: string;
+  // Branding
+  companyName?: string;
+  companyLogo?: string;
+  // Defaults
+  invoicePrefix?: string;
+  currency: 'USD' | 'PKR';
+  notes?: string;
+  // Payment terms
+  paymentTermsDays?: number; // e.g., 7, 14, 30 days from invoice date
+  createdAt: string;
+  updatedAt: string;
+}
