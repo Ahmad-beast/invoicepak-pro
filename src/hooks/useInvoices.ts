@@ -12,9 +12,10 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Invoice, InvoiceItem } from '@/types/invoice';
+import { Invoice, InvoiceItem, CurrencyCode } from '@/types/invoice';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getDefaultRateToPKR } from '@/lib/currency';
 
 const DEFAULT_USD_TO_PKR_RATE = 278.50;
 
@@ -87,10 +88,13 @@ export const useInvoices = () => {
       Object.entries(data).filter(([_, v]) => v !== undefined)
     );
 
-    const conversionRate = data.customExchangeRate || DEFAULT_USD_TO_PKR_RATE;
-    const convertedAmount = data.currency === 'USD' 
-      ? data.amount * conversionRate 
-      : data.amount / conversionRate;
+    const baseCurrency = data.currency || 'USD';
+    const rateToPKR = data.customExchangeRate || getDefaultRateToPKR(baseCurrency as CurrencyCode);
+    
+    // Convert to PKR for storage
+    const convertedAmount = baseCurrency === 'PKR' 
+      ? data.amount / rateToPKR  // PKR to USD
+      : data.amount * rateToPKR; // Other currencies to PKR
 
     try {
       const shareId = generateShareId();
@@ -101,7 +105,7 @@ export const useInvoices = () => {
         createdAt: serverTimestamp(),
         invoiceNumber: generateInvoiceNumber(data.invoicePrefix),
         convertedAmount: Math.round(convertedAmount * 100) / 100,
-        conversionRate: conversionRate,
+        conversionRate: rateToPKR,
         invoiceDate: data.invoiceDate || new Date().toISOString(),
         dueDate: data.dueDate || new Date().toISOString(),
         senderName: data.senderName || '',
@@ -148,7 +152,5 @@ export const useInvoices = () => {
     }
   };
 
-  const getConversionRate = () => DEFAULT_USD_TO_PKR_RATE;
-
-  return { invoices, loading, createInvoice, updateInvoiceStatus, deleteInvoice, getConversionRate };
+  return { invoices, loading, createInvoice, updateInvoiceStatus, deleteInvoice };
 };

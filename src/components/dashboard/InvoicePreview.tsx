@@ -1,11 +1,12 @@
 import { format } from 'date-fns';
-import { InvoiceItem } from '@/types/invoice';
+import { InvoiceItem, CurrencyCode } from '@/types/invoice';
+import { formatCurrency, getCurrencySymbol } from '@/lib/currency';
 
 interface InvoicePreviewProps {
   clientName: string;
   serviceDescription: string;
   amount: number;
-  currency: 'USD' | 'PKR';
+  currency: CurrencyCode;
   conversionRate: number;
   invoiceNumber?: string;
   status?: 'draft' | 'sent' | 'paid';
@@ -36,24 +37,15 @@ export const InvoicePreview = ({
   companyName,
   companyLogo,
 }: InvoicePreviewProps) => {
-  const formatCurrency = (value: number, curr: string) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: curr,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
   // Calculate total from items if available, otherwise use amount prop
   const totalAmount = items.length > 0 
     ? items.reduce((sum, item) => sum + item.amount, 0) 
     : amount;
 
-  const convertedAmount = currency === 'USD' 
-    ? totalAmount * conversionRate 
-    : totalAmount / conversionRate;
-  const convertedCurrency = currency === 'USD' ? 'PKR' : 'USD';
+  const convertedAmount = currency === 'PKR' 
+    ? totalAmount / conversionRate 
+    : totalAmount * conversionRate;
+  const convertedCurrency = currency === 'PKR' ? 'USD' : 'PKR';
 
   const getStatusColor = () => {
     switch (status) {

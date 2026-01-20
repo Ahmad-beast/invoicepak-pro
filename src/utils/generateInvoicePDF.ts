@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { Invoice } from '@/types/invoice';
 import { format } from 'date-fns';
+import { formatCurrencyForPDF, getCurrencySymbol } from '@/lib/currency';
 
 // --- CONFIGURATION & STYLING ---
 const PAGE_CONFIG = {
@@ -79,14 +80,9 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     }
   };
 
-  // 2. Format Currency
+  // 2. Format Currency (using our centralized helper for PDF-safe formatting)
   const formatMoney = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount);
+    return formatCurrencyForPDF(amount, currency);
   };
 
   // 3. Draw Footer (Page Number)

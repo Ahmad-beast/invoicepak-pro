@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useInvoiceTemplates } from '@/hooks/useInvoiceTemplates';
-import { InvoiceTemplate } from '@/types/invoice';
+import { InvoiceTemplate, CurrencyCode } from '@/types/invoice';
+import { SUPPORTED_CURRENCIES, CURRENCY_CONFIG } from '@/lib/currency';
 import { toast } from 'sonner';
 import { Save, FileText, Trash2, Upload, X, Building2, Crown, Edit2 } from 'lucide-react';
 import { useRef } from 'react';
@@ -20,7 +21,7 @@ interface InvoiceTemplateManagerProps {
     companyName: string;
     companyLogo: string | null;
     invoicePrefix: string;
-    currency: 'USD' | 'PKR';
+    currency: CurrencyCode;
     notes: string;
     paymentTermsDays?: number;
   };
@@ -42,7 +43,7 @@ export const InvoiceTemplateManager = ({
     companyName: '',
     companyLogo: null as string | null,
     invoicePrefix: '',
-    currency: 'USD' as 'USD' | 'PKR',
+    currency: 'USD' as CurrencyCode,
     notes: '',
     paymentTermsDays: 14,
   });
@@ -370,14 +371,17 @@ export const InvoiceTemplateManager = ({
               <Label>Default Currency</Label>
               <Select 
                 value={formData.currency} 
-                onValueChange={(value: 'USD' | 'PKR') => setFormData(prev => ({ ...prev, currency: value }))}
+                onValueChange={(value: CurrencyCode) => setFormData(prev => ({ ...prev, currency: value }))}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="PKR">PKR (₨)</SelectItem>
+                  {SUPPORTED_CURRENCIES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {code} ({CURRENCY_CONFIG[code].symbol})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
