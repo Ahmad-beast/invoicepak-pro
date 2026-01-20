@@ -29,6 +29,9 @@ export interface Invoice {
   invoicePrefix?: string;
   // Multiple line items
   items?: InvoiceItem[];
+  // Company branding (Pro feature)
+  companyName?: string;
+  companyLogo?: string; // Base64 image string
 }
 
 export interface NoteTemplate {

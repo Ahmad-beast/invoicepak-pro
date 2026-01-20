@@ -130,8 +130,45 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   // --- START DOCUMENT GENERATION ---
 
   // === HEADER ===
-  // Logo / Brand Name
-  if (!removeBranding) {
+  // Check for custom branding (Pro feature)
+  const hasCustomLogo = invoice.companyLogo && invoice.companyLogo.length > 0;
+  const hasCustomCompanyName = invoice.companyName && invoice.companyName.trim().length > 0;
+  
+  if (hasCustomLogo) {
+    // Add custom logo at top-left
+    try {
+      doc.addImage(invoice.companyLogo!, 'AUTO', PAGE_CONFIG.margin, y, 35, 15);
+      if (hasCustomCompanyName) {
+        drawText(invoice.companyName!, PAGE_CONFIG.margin, y + 20, { 
+          size: 12, 
+          weight: 'bold', 
+          color: COLORS.secondary 
+        });
+      }
+    } catch (error) {
+      // Fallback if logo fails to render
+      console.error('Failed to render logo:', error);
+      if (hasCustomCompanyName) {
+        drawText(invoice.companyName!, PAGE_CONFIG.margin, y + 6, { 
+          size: 18, 
+          weight: 'bold', 
+          color: COLORS.secondary 
+        });
+      }
+    }
+  } else if (hasCustomCompanyName) {
+    // Only custom company name, no logo
+    drawText(invoice.companyName!, PAGE_CONFIG.margin, y + 6, { 
+      size: 18, 
+      weight: 'bold', 
+      color: COLORS.secondary 
+    });
+    drawText('Professional Invoice', PAGE_CONFIG.margin, y + 12, { 
+      size: 8, 
+      color: COLORS.lightText 
+    });
+  } else if (!removeBranding) {
+    // Default InvoicePK branding
     drawText('InvoicePK', PAGE_CONFIG.margin, y + 6, { 
       size: 22, 
       weight: 'bold', 
@@ -142,7 +179,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
       color: COLORS.lightText 
     });
   } else {
-    // If branding off, show Sender Name prominent
+    // If branding off and no custom branding, show Sender Name prominent
     drawText(invoice.senderName || 'INVOICE', PAGE_CONFIG.margin, y + 6, { 
       size: 20, 
       weight: 'bold', 

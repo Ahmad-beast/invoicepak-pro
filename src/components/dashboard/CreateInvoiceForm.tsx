@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,13 +10,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useNoteTemplates } from '@/hooks/useNoteTemplates';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, BookOpen, Crown, AlertCircle, Lock } from 'lucide-react';
+import { ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, BookOpen, Crown, AlertCircle, Lock, Upload, X, Building2 } from 'lucide-react';
 import { InvoicePreview } from './InvoicePreview';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,11 @@ export const CreateInvoiceForm = () => {
   // New state for invoice prefix
   const [invoicePrefix, setInvoicePrefix] = useState('');
   
+  // Company branding state (Pro feature)
+  const [companyName, setCompanyName] = useState('');
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  
   // Note templates state
   const [newTemplateName, setNewTemplateName] = useState('');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
@@ -61,6 +67,38 @@ export const CreateInvoiceForm = () => {
   const canCreate = canCreateInvoice();
   const remainingInvoices = getRemainingInvoices();
   const canUseCustomRate = canUseFeature('customExchangeRate');
+  const isPro = subscription?.plan === 'pro';
+
+  // Handle logo upload
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+    
+    // Validate file size (max 500KB)
+    if (file.size > 500 * 1024) {
+      toast.error('Logo must be less than 500KB');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCompanyLogo(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeLogo = () => {
+    setCompanyLogo(null);
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
 
   // Calculate total amount from items
   const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
@@ -150,6 +188,8 @@ export const CreateInvoiceForm = () => {
       customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
       invoicePrefix: invoicePrefix.trim() || undefined,
       items: validItems,
+      companyName: isPro && companyName.trim() ? companyName.trim() : undefined,
+      companyLogo: isPro && companyLogo ? companyLogo : undefined,
     });
 
     if (invoice) {
@@ -217,6 +257,120 @@ export const CreateInvoiceForm = () => {
             </Alert>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Company Branding Section (Pro Feature) */}
+            <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Company Branding</Label>
+                  {!isPro && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Crown className="w-3 h-3" />
+                      Pro
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <TooltipProvider>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Company Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName" className="text-xs text-muted-foreground">
+                      Company Name
+                    </Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Input
+                            id="companyName"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            placeholder="Your Company Name"
+                            disabled={!isPro}
+                            className={cn(
+                              "bg-background border-border",
+                              !isPro && "opacity-50 cursor-not-allowed"
+                            )}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      {!isPro && (
+                        <TooltipContent>
+                          <p>Upgrade to Pro to add custom branding</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </div>
+                  
+                  {/* Company Logo */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Company Logo
+                    </Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          {companyLogo && isPro ? (
+                            <div className="relative w-full h-10 border border-border rounded-md bg-background flex items-center px-3 gap-2">
+                              <img 
+                                src={companyLogo} 
+                                alt="Logo preview" 
+                                className="h-6 w-6 object-contain"
+                              />
+                              <span className="text-xs text-muted-foreground truncate flex-1">Logo uploaded</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={removeLogo}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className={cn(
+                                "w-full h-10 gap-2",
+                                !isPro && "opacity-50 cursor-not-allowed"
+                              )}
+                              disabled={!isPro}
+                              onClick={() => logoInputRef.current?.click()}
+                            >
+                              <Upload className="w-4 h-4" />
+                              Upload Logo
+                            </Button>
+                          )}
+                          <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className="hidden"
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      {!isPro && (
+                        <TooltipContent>
+                          <p>Upgrade to Pro to add custom branding</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </div>
+                </div>
+              </TooltipProvider>
+              
+              {!isPro && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Upgrade to Pro to add your company name and logo to invoices
+                </p>
+              )}
+            </div>
+            
             {/* Sender Name (Read-only) */}
             <div className="space-y-2">
               <Label htmlFor="senderName" className="text-sm font-medium">
@@ -500,21 +654,13 @@ export const CreateInvoiceForm = () => {
               )}
             </div>
 
+            {/* Total Amount Display - Simple currency-based display */}
             {totalAmount > 0 && (
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>
-                    {useCustomRate ? 'Custom Rate' : 'Auto Rate'}: 1 USD = {activeRate.toFixed(2)} PKR
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-lg font-semibold">
-                  <span className="text-foreground">
-                    {currency === 'USD' ? '$' : '₨'}{totalAmount.toFixed(2)} {currency}
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-primary" />
-                  <span className="text-primary">
-                    {currency === 'USD' ? '₨' : '$'}{calculateConversion()} {currency === 'USD' ? 'PKR' : 'USD'}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Amount</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {currency === 'USD' ? '$' : '₨'}{totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
                   </span>
                 </div>
               </div>
