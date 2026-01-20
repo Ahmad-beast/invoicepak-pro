@@ -26,9 +26,9 @@ const COLORS = {
 export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = false): void => {
   // Initialize PDF
   const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: PAGE_CONFIG.unit,
-    format: PAGE_CONFIG.format,
+    orientation: 'portrait' as const,
+    unit: PAGE_CONFIG.unit as 'mm',
+    format: PAGE_CONFIG.format as 'a4',
   });
 
   // Dimensions

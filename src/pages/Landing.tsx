@@ -8,10 +8,17 @@ import { Pricing } from '@/components/landing/Pricing';
 import { FAQ } from '@/components/landing/FAQ';
 import { CTA } from '@/components/landing/CTA';
 import { Footer } from '@/components/landing/Footer';
+import { SEO } from '@/components/SEO';
 
 const Landing = () => {
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Free Invoice Generator for Pakistani Freelancers & Agencies"
+        description="Create professional USD and PKR invoices instantly with InvoicePak Pro. The best free invoice maker designed specifically for freelancers, remote workers, and agencies in Pakistan. Download PDF invoices with auto-currency conversion."
+        keywords="free invoice generator pakistan, invoice maker for freelancers, usd to pkr invoice, professional invoice template, freelance bill maker, invoicepak pro, digital munshi"
+        canonical="/"
+      />
       <Navbar />
       <Hero />
       <Stats />
