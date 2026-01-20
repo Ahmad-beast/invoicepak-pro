@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthGate } from "@/components/auth/AuthGate";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { initGA } from "@/lib/analytics";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import Landing from "./pages/Landing";
@@ -42,6 +43,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <AnnouncementBanner />
             <PageTracker>
               <Routes>
                 <Route path="/" element={<Landing />} />

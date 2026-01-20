@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { AnnouncementManager } from '@/components/admin/AnnouncementManager';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -101,6 +102,9 @@ const Admin = () => {
             Refresh
           </Button>
         </div>
+
+        {/* Global Announcement Manager */}
+        <AnnouncementManager />
 
         {/* Security Notice */}
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
