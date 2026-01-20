@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/contexts/AuthContext';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ import { format } from 'date-fns';
 
 const Admin = () => {
   const navigate = useNavigate();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isRoleLoading: roleLoading } = useAuth();
   const { users, loading: usersLoading, refetch, toggleProStatus, deleteUser } = useAdminUsers();
 
   // Redirect non-admins to dashboard
