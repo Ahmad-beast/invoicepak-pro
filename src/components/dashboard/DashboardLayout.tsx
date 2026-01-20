@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown } from 'lucide-react';
+import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +15,7 @@ interface DashboardLayoutProps {
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, logout } = useAuth();
   const { isPro, loading: subscriptionLoading } = useSubscription();
+  const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -30,6 +32,8 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/dashboard/create', label: 'Create Invoice', icon: Plus },
     { path: '/dashboard/subscription', label: 'Subscription', icon: Crown },
+    // Admin link only shown to admins
+    ...(isAdmin ? [{ path: '/admin', label: 'Admin Panel', icon: ShieldAlert }] : []),
   ];
 
   return (

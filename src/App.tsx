@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import CreateInvoice from "./pages/CreateInvoice";
 import SharedInvoice from "./pages/SharedInvoice";
 import Subscription from "./pages/Subscription";
+import Admin from "./pages/Admin";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookieSettings from "./pages/CookieSettings";
@@ -68,6 +69,14 @@ const App = () => {
                   element={
                     <AuthGate>
                       <Subscription />
+                    </AuthGate>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <AuthGate>
+                      <Admin />
                     </AuthGate>
                   }
                 />
