@@ -9,6 +9,7 @@ import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
+import { formatCurrency } from '@/lib/currency';
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -41,14 +42,6 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
     }
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
 
   const handleDownloadPDF = async (invoice: Invoice, e: React.MouseEvent) => {
     e.stopPropagation();

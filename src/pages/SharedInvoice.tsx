@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Loader2, FileText, AlertCircle } from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/currency';
 
 const SharedInvoice = () => {
   const { shareId } = useParams<{ shareId: string }>();
@@ -62,14 +63,6 @@ const SharedInvoice = () => {
     }
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
 
   const getStatusStyle = (status: Invoice['status']) => {
     switch (status) {

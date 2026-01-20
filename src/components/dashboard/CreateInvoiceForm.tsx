@@ -23,13 +23,14 @@ import { InvoicePreview } from './InvoicePreview';
 import { InvoiceTemplateManager } from './InvoiceTemplateManager';
 import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { InvoiceItem, InvoiceTemplate } from '@/types/invoice';
+import { InvoiceItem, InvoiceTemplate, CurrencyCode } from '@/types/invoice';
+import { SUPPORTED_CURRENCIES, CURRENCY_CONFIG, getCurrencySymbol, getDefaultRateToPKR, formatCurrency } from '@/lib/currency';
 
 export const CreateInvoiceForm = () => {
   const { user } = useAuth();
   const [clientName, setClientName] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
-  const [currency, setCurrency] = useState<'USD' | 'PKR'>('USD');
+  const [currency, setCurrency] = useState<CurrencyCode>('USD');
   const [status, setStatus] = useState<'draft' | 'sent' | 'paid'>('draft');
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date());
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
@@ -57,12 +58,12 @@ export const CreateInvoiceForm = () => {
   const [newTemplateName, setNewTemplateName] = useState('');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
-  const { createInvoice, getConversionRate } = useInvoices();
+  const { createInvoice } = useInvoices();
   const { templates: noteTemplates, addTemplate: addNoteTemplate, deleteTemplate: deleteNoteTemplate } = useNoteTemplates();
   const { canCreateInvoice, getRemainingInvoices, incrementInvoiceCount, canUseFeature, subscription, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   
-  const defaultRate = getConversionRate();
+  const defaultRate = getDefaultRateToPKR(currency);
   const activeRate = useCustomRate && customRate ? parseFloat(customRate) : defaultRate;
   
   const senderName = user?.displayName || user?.email?.split('@')[0] || 'Your Name';
@@ -559,13 +560,16 @@ export const CreateInvoiceForm = () => {
             {/* Currency Selector */}
             <div className="space-y-2">
               <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
-              <Select value={currency} onValueChange={(v) => setCurrency(v as 'USD' | 'PKR')}>
+              <Select value={currency} onValueChange={(v) => setCurrency(v as CurrencyCode)}>
                 <SelectTrigger className="bg-background border-border h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="PKR">PKR (₨)</SelectItem>
+                  {SUPPORTED_CURRENCIES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {code} ({CURRENCY_CONFIG[code].symbol})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -625,7 +629,7 @@ export const CreateInvoiceForm = () => {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Rate ({currency === 'USD' ? '$' : '₨'})</Label>
+                        <Label className="text-xs text-muted-foreground">Rate ({getCurrencySymbol(currency)})</Label>
                         <Input
                           type="number"
                           min="0"
@@ -636,10 +640,10 @@ export const CreateInvoiceForm = () => {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Amount ({currency === 'USD' ? '$' : '₨'})</Label>
+                        <Label className="text-xs text-muted-foreground">Amount ({getCurrencySymbol(currency)})</Label>
                         <Input
                           type="text"
-                          value={`${currency === 'USD' ? '$' : '₨'} ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                          value={formatCurrency(item.amount, currency)}
                           disabled
                           className="bg-muted/50 border-border h-9 text-muted-foreground"
                         />
@@ -652,12 +656,12 @@ export const CreateInvoiceForm = () => {
               <p className="text-xs text-muted-foreground">Add items with description, quantity, and rate. Amount is calculated automatically.</p>
             </div>
 
-            {/* Custom Exchange Rate Toggle */}
+            {/* Conversion Rate Section */}
             <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium">Custom Exchange Rate</Label>
+                    <Label className="text-sm font-medium">Conversion Rate to PKR</Label>
                     {!canUseCustomRate && (
                       <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Crown className="w-3 h-3" />
@@ -665,32 +669,36 @@ export const CreateInvoiceForm = () => {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Override the default rate</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {currency === 'PKR' ? 'No conversion needed for PKR' : `Default: 1 ${currency} = ${getDefaultRateToPKR(currency)} PKR`}
+                  </p>
                 </div>
-                <Switch
-                  checked={useCustomRate && canUseCustomRate}
-                  onCheckedChange={(checked) => {
-                    if (!canUseCustomRate) {
-                      toast.error('Custom exchange rate is a Pro feature. Upgrade to unlock.');
-                      return;
-                    }
-                    setUseCustomRate(checked);
-                  }}
-                  disabled={!canUseCustomRate}
-                />
+                {currency !== 'PKR' && (
+                  <Switch
+                    checked={useCustomRate && canUseCustomRate}
+                    onCheckedChange={(checked) => {
+                      if (!canUseCustomRate) {
+                        toast.error('Custom exchange rate is a Pro feature. Upgrade to unlock.');
+                        return;
+                      }
+                      setUseCustomRate(checked);
+                    }}
+                    disabled={!canUseCustomRate}
+                  />
+                )}
               </div>
               
-              {useCustomRate && canUseCustomRate && (
+              {useCustomRate && canUseCustomRate && currency !== 'PKR' && (
                 <div className="space-y-2">
                   <Label htmlFor="customRate" className="text-sm font-medium">
-                    Exchange Rate (1 USD = ? PKR)
+                    Exchange Rate (1 {currency} = ? PKR)
                   </Label>
                   <Input
                     id="customRate"
                     type="number"
                     value={customRate}
                     onChange={(e) => setCustomRate(e.target.value)}
-                    placeholder={defaultRate.toString()}
+                    placeholder={getDefaultRateToPKR(currency).toString()}
                     min="0"
                     step="0.01"
                     className="bg-background border-border h-10"
