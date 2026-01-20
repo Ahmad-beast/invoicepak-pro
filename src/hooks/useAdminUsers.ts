@@ -48,6 +48,7 @@ export const useAdminUsers = () => {
           subscriptionStatus: data.subscriptionStatus || null,
           createdAt: data.createdAt?.toDate() || new Date(),
           role: (rolesMap.get(doc.id) as 'user' | 'admin') || 'user',
+          isBanned: data.isBanned || false,
         };
       });
       
@@ -91,6 +92,32 @@ export const useAdminUsers = () => {
     }
   };
 
+  const toggleBanStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const newStatus = !currentStatus;
+      
+      await updateDoc(userRef, {
+        isBanned: newStatus,
+        updatedAt: Timestamp.now(),
+      });
+      
+      // Update local state
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId
+            ? { ...user, isBanned: newStatus }
+            : user
+        )
+      );
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Error toggling ban status:', err);
+      return { success: false, error: 'Failed to update user ban status' };
+    }
+  };
+
   const deleteUser = async (userId: string) => {
     try {
       // Delete from users collection
@@ -115,6 +142,7 @@ export const useAdminUsers = () => {
     error,
     refetch: fetchUsers,
     toggleProStatus,
+    toggleBanStatus,
     deleteUser,
   };
 };

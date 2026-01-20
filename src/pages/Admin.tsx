@@ -14,25 +14,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Crown, Trash2, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Crown, Trash2, RefreshCw, ShieldAlert, Ban, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+
+// Helper to get display name or fallback to email prefix
+const getDisplayName = (displayName: string | null, email: string): string => {
+  if (displayName) return displayName;
+  return email.split('@')[0] || 'Unknown';
+};
 
 const Admin = () => {
   const navigate = useNavigate();
   const { isAdmin, isRoleLoading: roleLoading } = useAuth();
-  const { users, loading: usersLoading, refetch, toggleProStatus, deleteUser } = useAdminUsers();
+  const { users, loading: usersLoading, refetch, toggleProStatus, toggleBanStatus, deleteUser } = useAdminUsers();
 
   // Redirect non-admins to dashboard
   useEffect(() => {
@@ -50,7 +45,19 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleToggleBan = async (userId: string, currentStatus: boolean) => {
+    const result = await toggleBanStatus(userId, currentStatus);
+    if (result.success) {
+      toast.success(`User ${currentStatus ? 'unblocked' : 'blocked'} successfully`);
+    } else {
+      toast.error(result.error || 'Failed to update user');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, email: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete ${email}? This action cannot be undone.`);
+    if (!confirmed) return;
+    
     const result = await deleteUser(userId);
     if (result.success) {
       toast.success('User deleted successfully');
@@ -138,9 +145,21 @@ const Admin = () => {
                 </TableRow>
               ) : (
                 users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>{user.displayName || '—'}</TableCell>
+                  <TableRow 
+                    key={user.id}
+                    className={user.isBanned ? 'bg-destructive/10 opacity-70' : ''}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {user.email}
+                        {user.isBanned && (
+                          <Badge variant="destructive" className="text-xs">
+                            Banned
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getDisplayName(user.displayName, user.email)}</TableCell>
                     <TableCell>
                       <Badge
                         variant={user.plan === 'pro' ? 'default' : 'secondary'}
@@ -168,31 +187,31 @@ const Admin = () => {
                           <Crown className="w-4 h-4 mr-1" />
                           {user.plan === 'pro' ? 'Make Free' : 'Make Pro'}
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete User</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete {user.email}? This action cannot be undone.
-                                This will remove their user document but not their Firebase Auth account.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <Button
+                          variant={user.isBanned ? 'outline' : 'secondary'}
+                          size="sm"
+                          onClick={() => handleToggleBan(user.id, user.isBanned || false)}
+                          className={user.isBanned ? 'border-primary text-primary hover:bg-primary/10' : ''}
+                        >
+                          {user.isBanned ? (
+                            <>
+                              <UserCheck className="w-4 h-4 mr-1" />
+                              Unblock
+                            </>
+                          ) : (
+                            <>
+                              <Ban className="w-4 h-4 mr-1" />
+                              Block
+                            </>
+                          )}
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleDeleteUser(user.id, user.email)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

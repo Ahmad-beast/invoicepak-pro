@@ -15,4 +15,5 @@ export interface AdminUser {
   subscriptionStatus: string | null;
   createdAt: Date;
   role: UserRole;
+  isBanned?: boolean;
 }

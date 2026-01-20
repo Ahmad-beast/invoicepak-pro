@@ -64,16 +64,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Fetch role from Firestore user_roles/{uid}
+      // Fetch user data and role from Firestore
       setIsRoleLoading(true);
       (async () => {
         try {
-          const snap = await getDoc(doc(db, 'user_roles', nextUser.uid));
-          const fetchedRole = (snap.exists() ? (snap.data()?.role as UserRole) : 'user') || 'user';
+          // Check if user is banned
+          const userSnap = await getDoc(doc(db, 'users', nextUser.uid));
+          if (userSnap.exists() && userSnap.data()?.isBanned === true) {
+            console.log('User is banned, signing out...');
+            await signOut(auth);
+            alert('Your account has been suspended. Please contact support.');
+            if (isMounted) {
+              setUser(null);
+              setRole('user');
+              setIsRoleLoading(false);
+            }
+            return;
+          }
+
+          // Fetch role
+          const roleSnap = await getDoc(doc(db, 'user_roles', nextUser.uid));
+          const fetchedRole = (roleSnap.exists() ? (roleSnap.data()?.role as UserRole) : 'user') || 'user';
           console.log('Fetched User Role:', fetchedRole);
           if (isMounted) setRole(fetchedRole);
         } catch (error) {
-          console.error('Error fetching user role:', error);
+          console.error('Error fetching user data:', error);
           if (isMounted) setRole('user');
         } finally {
           if (isMounted) setIsRoleLoading(false);
