@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { FileText, ArrowLeft } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { SEO } from '@/components/SEO';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -50,6 +51,11 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <SEO
+        title="Login - Access Your Dashboard"
+        description="Log in to InvoicePak Pro to manage your clients, track payments, and download invoice history."
+        canonical="/login"
+      />
       <div className="w-full max-w-md">
         <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors">
           <ArrowLeft className="w-4 h-4" />

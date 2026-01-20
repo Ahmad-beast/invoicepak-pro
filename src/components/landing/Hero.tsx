@@ -30,9 +30,9 @@ export const Hero = () => {
         </div>
         
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight">
-          Professional Invoices,
+          The Easiest Way to Create
           <br />
-          <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Made Simple</span>
+          <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Invoices for Pakistani Freelancers</span>
         </h1>
         
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
