@@ -802,6 +802,8 @@ export const CreateInvoiceForm = () => {
           notes={notes}
           invoicePrefix={invoicePrefix}
           items={items}
+          companyName={isPro ? companyName : undefined}
+          companyLogo={isPro ? companyLogo : undefined}
         />
       </div>
     </div>
