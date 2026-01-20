@@ -10,9 +10,15 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserRole } from '@/types/admin';
 
 interface AuthContextType {
   user: User | null;
+  role: UserRole;
+  isRoleLoading: boolean;
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (
     email: string,
@@ -39,14 +45,46 @@ const googleProvider = new GoogleAuthProvider();
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [role, setRole] = useState<UserRole>('user');
+  const [isRoleLoading, setIsRoleLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      if (!isMounted) return;
+
       setUser(nextUser);
       setIsAuthLoading(false);
+
+      // Default role state
+      if (!nextUser) {
+        setRole('user');
+        setIsRoleLoading(false);
+        return;
+      }
+
+      // Fetch role from Firestore user_roles/{uid}
+      setIsRoleLoading(true);
+      (async () => {
+        try {
+          const snap = await getDoc(doc(db, 'user_roles', nextUser.uid));
+          const fetchedRole = (snap.exists() ? (snap.data()?.role as UserRole) : 'user') || 'user';
+          console.log('Fetched User Role:', fetchedRole);
+          if (isMounted) setRole(fetchedRole);
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+          if (isMounted) setRole('user');
+        } finally {
+          if (isMounted) setIsRoleLoading(false);
+        }
+      })();
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -107,6 +145,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        role,
+        isRoleLoading,
+        isAdmin: role === 'admin',
         login,
         signup,
         signInWithGoogle,
