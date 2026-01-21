@@ -17,6 +17,8 @@ import CreateInvoice from "./pages/CreateInvoice";
 import SharedInvoice from "./pages/SharedInvoice";
 import Subscription from "./pages/Subscription";
 import Admin from "./pages/Admin";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookieSettings from "./pages/CookieSettings";
@@ -86,6 +88,8 @@ const App = () => {
                 {/* Public shared invoice route - uses document ID */}
                 <Route path="/invoice/:shareId" element={<SharedInvoice />} />
 
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/cookies" element={<CookieSettings />} />
