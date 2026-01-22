@@ -9,7 +9,6 @@ import { FAQ } from '@/components/landing/FAQ';
 import { CTA } from '@/components/landing/CTA';
 import { Footer } from '@/components/landing/Footer';
 import { SEO } from '@/components/SEO';
-import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 
 const Landing = () => {
   return (
@@ -20,7 +19,6 @@ const Landing = () => {
         keywords="free invoice generator pakistan, invoice maker for freelancers, usd to pkr invoice, professional invoice template, freelance bill maker, invoicepak pro, digital munshi"
         canonical="/"
       />
-      <AnnouncementBanner />
       <Navbar />
       <main className="flex-grow">
         <Hero />
