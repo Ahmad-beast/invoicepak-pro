@@ -4,10 +4,11 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 
 const navLinks = [
-  { href: '#features', label: 'Features' },
-  { href: '#how-it-works', label: 'How It Works' },
-  { href: '#pricing', label: 'Pricing' },
-  { href: '#faq', label: 'FAQ' },
+  { href: '#features', label: 'Features', isAnchor: true },
+  { href: '#how-it-works', label: 'How It Works', isAnchor: true },
+  { href: '#pricing', label: 'Pricing', isAnchor: true },
+  { href: '/my-story', label: 'My Story', isAnchor: false },
+  { href: '#faq', label: 'FAQ', isAnchor: true },
 ];
 
 export const Navbar = () => {
@@ -35,14 +36,24 @@ export const Navbar = () => {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={(e) => scrollToSection(e, link.href)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {link.label}
-            </a>
+            link.isAnchor ? (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={(e) => scrollToSection(e, link.href)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {link.label}
+              </Link>
+            )
           ))}
         </div>
         
@@ -69,14 +80,25 @@ export const Navbar = () => {
         <div className="md:hidden bg-background border-b border-border px-4 py-4">
           <div className="flex flex-col gap-4">
             {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={(e) => scrollToSection(e, link.href)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-              >
-                {link.label}
-              </a>
+              link.isAnchor ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={(e) => scrollToSection(e, link.href)}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                >
+                  {link.label}
+                </Link>
+              )
             ))}
             <div className="flex flex-col gap-2 pt-4 border-t border-border">
               <Link to="/login" onClick={() => setMobileMenuOpen(false)}>

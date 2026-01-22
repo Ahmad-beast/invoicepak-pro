@@ -22,6 +22,7 @@ import BlogPost from "./pages/BlogPost";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookieSettings from "./pages/CookieSettings";
+import MyStory from "./pages/MyStory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -93,6 +94,7 @@ const App = () => {
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/cookies" element={<CookieSettings />} />
+                <Route path="/my-story" element={<MyStory />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </PageTracker>
