@@ -10,6 +10,7 @@ const DISMISSED_KEY = 'announcement_dismissed';
 export const AnnouncementBanner = () => {
   const { announcement, loading } = useAnnouncement();
   const [dismissed, setDismissed] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   // Check if user has dismissed this specific announcement
   useEffect(() => {
@@ -19,6 +20,8 @@ export const AnnouncementBanner = () => {
         setDismissed(true);
       } else {
         setDismissed(false);
+        // Trigger entrance animation after a brief delay
+        setTimeout(() => setIsVisible(true), 50);
       }
     }
   }, [announcement?.message]);
@@ -27,7 +30,8 @@ export const AnnouncementBanner = () => {
     if (announcement?.message) {
       localStorage.setItem(DISMISSED_KEY, announcement.message);
     }
-    setDismissed(true);
+    setIsVisible(false);
+    setTimeout(() => setDismissed(true), 300);
   };
 
   // Don't show if loading, not active, dismissed, or no message
@@ -52,8 +56,9 @@ export const AnnouncementBanner = () => {
   return (
     <div
       className={cn(
-        'relative w-full py-2.5 px-4 border-b flex items-center justify-center gap-3 text-sm',
-        typeStyles[announcement.type]
+        'relative w-full py-2.5 px-4 border-b flex items-center justify-center gap-3 text-sm transition-all duration-300 ease-out',
+        typeStyles[announcement.type],
+        isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
       )}
     >
       <Icon className="w-4 h-4 flex-shrink-0" />
