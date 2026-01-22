@@ -3,10 +3,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageSquare } from 'lucide-react';
+import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageSquare, MessageCircle } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { FeedbackDialog } from './FeedbackDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -188,15 +189,40 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
       </main>
 
-      {/* Floating Feedback Button */}
-      <Button
-        onClick={() => setFeedbackOpen(true)}
-        className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg h-14 px-5 gap-2"
-        size="lg"
-      >
-        <MessageSquare className="w-5 h-5" />
-        <span className="hidden sm:inline">Feedback</span>
-      </Button>
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+        {/* WhatsApp Support Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              asChild
+              className="rounded-full shadow-lg h-14 w-14 bg-[#25D366] hover:bg-[#20BD5A] text-white"
+              size="icon"
+            >
+              <a
+                href="https://wa.me/923064482383"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle className="w-6 h-6" />
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            <p>Chat with Support</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Feedback Button */}
+        <Button
+          onClick={() => setFeedbackOpen(true)}
+          className="rounded-full shadow-lg h-14 px-5 gap-2"
+          size="lg"
+        >
+          <MessageSquare className="w-5 h-5" />
+          <span className="hidden sm:inline">Feedback</span>
+        </Button>
+      </div>
 
       {/* Feedback Dialog */}
       <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
