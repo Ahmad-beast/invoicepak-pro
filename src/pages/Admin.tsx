@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useFeedback } from '@/hooks/useFeedback';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AnnouncementManager } from '@/components/admin/AnnouncementManager';
+import { BannerManager } from '@/components/admin/BannerManager';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -286,8 +286,8 @@ const Admin = () => {
           </Card>
         </div>
 
-        {/* Global Announcement Manager */}
-        <AnnouncementManager />
+        {/* Global Banner Manager */}
+        <BannerManager />
 
         {/* Tabs Section */}
         <Tabs defaultValue="users" className="space-y-6">
