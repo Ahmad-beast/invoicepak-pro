@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 export const Hero = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-4 pt-24 pb-20 overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center px-4 py-16 overflow-hidden">
       {/* Animated background decorations */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />

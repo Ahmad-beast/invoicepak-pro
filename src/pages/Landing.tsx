@@ -13,7 +13,7 @@ import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
       <SEO
         title="Free Invoice Generator for Pakistani Freelancers & Agencies"
         description="Create professional USD and PKR invoices instantly with InvoicePak Pro. The best free invoice maker designed specifically for freelancers, remote workers, and agencies in Pakistan. Download PDF invoices with auto-currency conversion."
@@ -22,7 +22,7 @@ const Landing = () => {
       />
       <AnnouncementBanner />
       <Navbar />
-      <main className="pt-16">
+      <main className="flex-grow">
         <Hero />
       <Stats />
       <div id="features">
