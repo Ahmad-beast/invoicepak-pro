@@ -20,7 +20,8 @@ const Landing = () => {
         canonical="/"
       />
       <Navbar />
-      <Hero />
+      <main className="pt-16">
+        <Hero />
       <Stats />
       <div id="features">
         <Features />
@@ -35,7 +36,8 @@ const Landing = () => {
       <div id="faq">
         <FAQ />
       </div>
-      <CTA />
+        <CTA />
+      </main>
       <Footer />
     </div>
   );
