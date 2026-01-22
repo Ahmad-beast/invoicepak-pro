@@ -56,7 +56,7 @@ export const AnnouncementBanner = () => {
   return (
     <div
       className={cn(
-        'relative w-full py-2.5 px-4 border-b flex items-center justify-center gap-3 text-sm transition-all duration-300 ease-out',
+        'sticky top-0 z-50 w-full py-2.5 px-4 border-b flex items-center justify-center gap-3 text-sm transition-all duration-300 ease-out',
         typeStyles[announcement.type],
         isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
       )}
