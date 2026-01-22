@@ -4,10 +4,40 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Megaphone, Save, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Megaphone, Save, Trash2, Sparkles, AlertTriangle, Zap, AlertOctagon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBanner } from '@/hooks/useBanner';
-import type { Banner } from '@/types/banner';
+import type { Banner, BannerType } from '@/types/banner';
+import { BANNER_TYPE_OPTIONS } from '@/types/banner';
+import { cn } from '@/lib/utils';
+
+const bannerPreviewStyles: Record<BannerType, { bg: string; text: string; icon: React.ElementType; pulse: boolean }> = {
+  promotion: {
+    bg: 'bg-blue-600',
+    text: 'text-white',
+    icon: Sparkles,
+    pulse: true,
+  },
+  warning: {
+    bg: 'bg-yellow-500',
+    text: 'text-yellow-950',
+    icon: AlertTriangle,
+    pulse: false,
+  },
+  new: {
+    bg: 'bg-emerald-600',
+    text: 'text-white',
+    icon: Zap,
+    pulse: false,
+  },
+  urgent: {
+    bg: 'bg-red-600',
+    text: 'text-white',
+    icon: AlertOctagon,
+    pulse: true,
+  },
+};
 
 export const BannerManager = () => {
   const { banner, loading, updateBanner, clearBanner } = useBanner();
@@ -16,6 +46,7 @@ export const BannerManager = () => {
     isActive: false,
     link: '',
     ctaText: '',
+    type: 'promotion',
   });
   const [saving, setSaving] = useState(false);
 
@@ -27,6 +58,7 @@ export const BannerManager = () => {
         isActive: banner.isActive || false,
         link: banner.link || '',
         ctaText: banner.ctaText || '',
+        type: banner.type || 'promotion',
       });
     }
   }, [banner]);
@@ -63,11 +95,15 @@ export const BannerManager = () => {
         isActive: false,
         link: '',
         ctaText: '',
+        type: 'promotion',
       });
     } else {
       toast.error(result.error || 'Failed to clear banner');
     }
   };
+
+  const previewStyle = bannerPreviewStyles[formData.type];
+  const PreviewIcon = previewStyle.icon;
 
   if (loading) {
     return (
@@ -100,6 +136,29 @@ export const BannerManager = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Live Preview */}
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Live Preview</Label>
+          <div
+            className={cn(
+              'w-full py-2.5 px-4 rounded-md flex items-center justify-center gap-3 text-sm',
+              previewStyle.bg,
+              previewStyle.text,
+              previewStyle.pulse && 'animate-pulse'
+            )}
+          >
+            <PreviewIcon className="w-4 h-4 shrink-0" />
+            <span className="font-medium">
+              {formData.text || 'Your banner message will appear here...'}
+            </span>
+            {formData.ctaText && (
+              <Button size="sm" variant="secondary" className="h-7 px-3 text-xs pointer-events-none">
+                {formData.ctaText}
+              </Button>
+            )}
+          </div>
+        </div>
+
         {/* Active Toggle */}
         <div className="flex items-center justify-between">
           <Label htmlFor="is-active" className="flex flex-col gap-1">
@@ -115,6 +174,28 @@ export const BannerManager = () => {
               setFormData((prev) => ({ ...prev, isActive: checked }))
             }
           />
+        </div>
+
+        {/* Banner Type */}
+        <div className="space-y-2">
+          <Label htmlFor="type">Banner Type</Label>
+          <Select
+            value={formData.type}
+            onValueChange={(value: BannerType) =>
+              setFormData((prev) => ({ ...prev, type: value }))
+            }
+          >
+            <SelectTrigger id="type">
+              <SelectValue placeholder="Select banner type" />
+            </SelectTrigger>
+            <SelectContent>
+              {BANNER_TYPE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Text */}
