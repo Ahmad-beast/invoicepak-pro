@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageCircle, Lightbulb } from 'lucide-react';
+import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageCircle, Lightbulb, Heart } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { FeedbackDialog } from './FeedbackDialog';
@@ -32,6 +32,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/dashboard/create', label: 'Create Invoice', icon: Plus },
     { path: '/dashboard/subscription', label: 'Subscription', icon: Crown },
+    { path: '/my-story', label: 'My Story', icon: Heart },
     // Admin link only shown to admins
     ...(!isRoleLoading && role === 'admin' ? [{ path: '/admin', label: 'Admin Panel', icon: ShieldAlert }] : []),
   ];
