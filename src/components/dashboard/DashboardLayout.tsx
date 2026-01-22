@@ -3,11 +3,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageSquare, MessageCircle } from 'lucide-react';
+import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageCircle, Lightbulb } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { FeedbackDialog } from './FeedbackDialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -189,38 +188,31 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
       </main>
 
-      {/* Floating Action Buttons */}
+      {/* Floating Support Stack */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-        {/* WhatsApp Support Button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              asChild
-              className="rounded-full shadow-lg h-14 w-14 bg-[#25D366] hover:bg-[#20BD5A] text-white"
-              size="icon"
-            >
-              <a
-                href="https://wa.me/923064482383"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MessageCircle className="w-6 h-6" />
-              </a>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">
-            <p>Chat with Support</p>
-          </TooltipContent>
-        </Tooltip>
-
-        {/* Feedback Button */}
+        {/* Request Feature Button */}
         <Button
           onClick={() => setFeedbackOpen(true)}
-          className="rounded-full shadow-lg h-14 px-5 gap-2"
-          size="lg"
+          variant="secondary"
+          className="rounded-full shadow-lg h-12 px-5 gap-2 hover:shadow-xl transition-shadow"
         >
-          <MessageSquare className="w-5 h-5" />
-          <span className="hidden sm:inline">Feedback</span>
+          <Lightbulb className="w-5 h-5" />
+          <span className="hidden sm:inline">Request Feature</span>
+        </Button>
+
+        {/* WhatsApp Support Button */}
+        <Button
+          asChild
+          className="rounded-full shadow-lg h-12 px-5 gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white hover:shadow-xl transition-shadow"
+        >
+          <a
+            href="https://wa.me/923064482383"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span className="hidden sm:inline">WhatsApp Support</span>
+          </a>
         </Button>
       </div>
 
