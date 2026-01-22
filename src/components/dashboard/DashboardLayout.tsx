@@ -3,9 +3,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert } from 'lucide-react';
+import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageSquare } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { FeedbackDialog } from './FeedbackDialog';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -185,6 +187,19 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {children}
         </div>
       </main>
+
+      {/* Floating Feedback Button */}
+      <Button
+        onClick={() => setFeedbackOpen(true)}
+        className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg h-14 px-5 gap-2"
+        size="lg"
+      >
+        <MessageSquare className="w-5 h-5" />
+        <span className="hidden sm:inline">Feedback</span>
+      </Button>
+
+      {/* Feedback Dialog */}
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 };
