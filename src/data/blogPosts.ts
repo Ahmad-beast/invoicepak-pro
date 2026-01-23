@@ -11,6 +11,16 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "4",
+    slug: "freelancer-guide-pakistan",
+    title: "The Complete Guide to Professional Invoicing for Pakistani Freelancers",
+    summary: "Everything you need to know about getting paid in Pakistan: Payoneer vs Wise, FBR tax compliance, and avoiding payment delays.",
+    date: "2026-01-23",
+    author: "InvoicePak Team",
+    coverImage: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop",
+    content: "" // Content is on the dedicated page
+  },
+  {
     id: "1",
     slug: "best-payment-methods-pakistan",
     title: "Sadapay vs Nayapay vs Wise: Best Payment Method for Pakistani Freelancers (2026)",
