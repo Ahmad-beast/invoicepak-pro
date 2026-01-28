@@ -11,6 +11,16 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "5",
+    slug: "invoice-guide",
+    title: "How to Create a Professional Invoice: The Ultimate Guide for Freelancers & Small Businesses (2026)",
+    summary: "Learn how to create professional invoices that get you paid faster. Complete guide covering invoice components, templates, payment terms, and tips for freelancers.",
+    date: "2026-01-27",
+    author: "InvoicePak Team",
+    coverImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop",
+    content: "" // Content is on the dedicated page
+  },
+  {
     id: "4",
     slug: "freelancer-guide-pakistan",
     title: "The Complete Guide to Professional Invoicing for Pakistani Freelancers",

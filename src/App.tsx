@@ -20,6 +20,7 @@ import Admin from "./pages/Admin";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import FreelancerGuidePakistan from "./pages/blog/freelancer-guide-pakistan";
+import InvoiceGuide from "./pages/blog/invoice-guide";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookieSettings from "./pages/CookieSettings";
@@ -92,6 +93,7 @@ const App = () => {
 
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/freelancer-guide-pakistan" element={<FreelancerGuidePakistan />} />
+                <Route path="/blog/invoice-guide" element={<InvoiceGuide />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
