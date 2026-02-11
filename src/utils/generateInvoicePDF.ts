@@ -8,7 +8,7 @@ const PAGE_CONFIG = {
   format: 'a4',
   unit: 'mm',
   margin: 15,
-  lineHeight: 1.2, // Improved line height for readability
+  lineHeight: 1.2,
 };
 
 // Professional Color Palette
@@ -73,12 +73,14 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     if (maxWidth) {
       // Split text to fit width
       const lines = doc.splitTextToSize(safeText, maxWidth);
-      doc.text(lines, x, yPos, { align, baseline: 'top' });
+      // 'as any' fixes the TypeScript error where 'baseline' is not recognized in strict types
+      doc.text(lines, x, yPos, { align, baseline: 'top' } as any);
+      
       // Return exact height used
       const lineHeightMm = size * 0.3527 * 1.5; 
       return lines.length * lineHeightMm; 
     } else {
-      doc.text(safeText, x, yPos, { align, baseline: 'top' });
+      doc.text(safeText, x, yPos, { align, baseline: 'top' } as any);
       return size * 0.3527 * 1.5;
     }
   };
@@ -131,6 +133,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   // Render Logo or Text
   if (invoice.companyLogo) {
     try {
+      // doc.addImage requires string | HTMLImageElement. invoice.companyLogo is string.
       doc.addImage(invoice.companyLogo, 'AUTO', PAGE_CONFIG.margin, y, 35, 15);
       if (invoice.companyName) {
         drawText(invoice.companyName, PAGE_CONFIG.margin, y + 20, { 
@@ -255,7 +258,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
       doc.rect(PAGE_CONFIG.margin, curY, contentWidth, 8, 'F');
       const ty = curY + 2;
       drawText('DESCRIPTION', cols.desc.x, ty, { size: 8, weight: 'bold', color: COLORS.white });
-      drawText('QTY', cols.qty.x, ty, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' }); // Fix alignment logic for Qty
+      drawText('QTY', cols.qty.x, ty, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' }); 
       drawText('RATE', cols.rate.x, ty, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
       drawText('AMOUNT', cols.amount.x, ty, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
       return 8;
@@ -267,9 +270,8 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
       const padding = 4;
       
       // Calculate Height Needed based on Description
-      // We perform a dummy calculation first
       const descLines = doc.splitTextToSize(item.description, cols.desc.w);
-      const lineHeight = 4; // approximate height per line
+      const lineHeight = 4; 
       const neededHeight = (descLines.length * lineHeight) + (padding * 2); 
       
       // Check Break
@@ -289,7 +291,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
       // Description (Wrapped)
       doc.setFontSize(9);
       doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
-      doc.text(descLines, cols.desc.x, textY);
+      doc.text(descLines, cols.desc.x, textY, { baseline: 'top' } as any);
 
       // Numbers
       drawText(item.quantity.toString(), cols.qty.x, textY, { size: 9, align: 'right' });
