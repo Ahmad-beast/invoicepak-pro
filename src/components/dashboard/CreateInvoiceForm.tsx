@@ -313,8 +313,8 @@ export const CreateInvoiceForm = () => {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl text-foreground">Create New Invoice</CardTitle>
-              <CardDescription>Fill in the details below to generate a professional invoice</CardDescription>
+              <CardTitle className="text-2xl text-foreground">{isEditing ? 'Edit Invoice' : 'Create New Invoice'}</CardTitle>
+              <CardDescription>{isEditing ? `Editing invoice #${editingInvoice?.invoiceNumber}` : 'Fill in the details below to generate a professional invoice'}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               {subscription && remainingInvoices !== Infinity && (
