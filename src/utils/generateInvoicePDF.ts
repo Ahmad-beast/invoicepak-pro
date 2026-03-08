@@ -3,369 +3,328 @@ import { Invoice } from '@/types/invoice';
 import { format } from 'date-fns';
 import { formatCurrencyForPDF } from '@/lib/currency';
 
-// --- CONFIGURATION & STYLING ---
-const PAGE_CONFIG = {
-  format: 'a4',
-  unit: 'mm',
-  margin: 15,
-  lineHeight: 1.2,
+// --- CONFIGURATION ---
+const PAGE = {
+  margin: 18,
+  footerHeight: 15,
 };
 
-// Professional Color Palette
-const COLORS = {
-  primary: [249, 115, 22] as [number, number, number],    // Brand Orange
-  secondary: [15, 23, 42] as [number, number, number],    // Dark Slate
-  text: [51, 65, 85] as [number, number, number],         // Normal Text
-  lightText: [100, 116, 139] as [number, number, number], // Muted Text
-  border: [226, 232, 240] as [number, number, number],    // Light Borders
-  accentBg: [248, 250, 252] as [number, number, number],  // Light Gray BG
+// Modern Color Palette
+const C = {
+  primary: [249, 115, 22] as [number, number, number],     // Brand Orange
+  primaryLight: [255, 237, 213] as [number, number, number], // Orange tint
+  dark: [15, 23, 42] as [number, number, number],           // Slate 900
+  text: [51, 65, 85] as [number, number, number],           // Slate 600
+  muted: [148, 163, 184] as [number, number, number],       // Slate 400
+  border: [226, 232, 240] as [number, number, number],      // Slate 200
+  bg: [248, 250, 252] as [number, number, number],          // Slate 50
   white: [255, 255, 255] as [number, number, number],
-  success: [34, 197, 94] as [number, number, number],
-  info: [59, 130, 246] as [number, number, number],
+  green: [22, 163, 74] as [number, number, number],         // Green 600
+  blue: [37, 99, 235] as [number, number, number],          // Blue 600
 };
 
 export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = false): void => {
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const contentWidth = pageWidth - (PAGE_CONFIG.margin * 2);
-  
-  let y = PAGE_CONFIG.margin;
-  let pageNumber = 1;
+  const pw = doc.internal.pageSize.getWidth();   // page width
+  const ph = doc.internal.pageSize.getHeight();   // page height
+  const cw = pw - PAGE.margin * 2;                // content width
+  const ml = PAGE.margin;                          // margin left
+  const mr = pw - PAGE.margin;                     // margin right
 
-  // --- HELPER FUNCTIONS ---
+  let y = PAGE.margin;
+  let pageNum = 1;
 
-  const drawText = (
+  // ── Helpers ──────────────────────────────────────────
+
+  const txt = (
     text: string | number,
     x: number,
     yPos: number,
-    options: {
+    opts: {
       size?: number;
       color?: [number, number, number];
-      weight?: 'normal' | 'bold';
+      bold?: boolean;
       align?: 'left' | 'center' | 'right';
-      maxWidth?: number; 
+      maxWidth?: number;
     } = {}
-  ) => {
-    const { 
-      size = 9, 
-      color = COLORS.text, 
-      weight = 'normal', 
-      align = 'left', 
-      maxWidth 
-    } = options;
-
+  ): number => {
+    const { size = 9, color = C.text, bold = false, align = 'left', maxWidth } = opts;
     doc.setFontSize(size);
     doc.setTextColor(color[0], color[1], color[2]);
-    doc.setFont('helvetica', weight);
-
-    const safeText = String(text ?? '');
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    const s = String(text ?? '');
+    const lineH = size * 0.3527 * 1.5;
 
     if (maxWidth) {
-      const lines = doc.splitTextToSize(safeText, maxWidth);
+      const lines = doc.splitTextToSize(s, maxWidth);
       doc.text(lines, x, yPos, { align, baseline: 'top' } as any);
-      const lineHeightMm = size * 0.3527 * 1.5; 
-      return lines.length * lineHeightMm; 
+      return lines.length * lineH;
+    }
+    doc.text(s, x, yPos, { align, baseline: 'top' } as any);
+    return lineH;
+  };
+
+  const money = (amount: number, currency: string) => formatCurrencyForPDF(amount, currency);
+
+  const line = (x1: number, yPos: number, x2: number, color: [number, number, number] = C.border, width = 0.3) => {
+    doc.setDrawColor(color[0], color[1], color[2]);
+    doc.setLineWidth(width);
+    doc.line(x1, yPos, x2, yPos);
+  };
+
+  const rect = (x: number, yPos: number, w: number, h: number, color: [number, number, number], radius = 0) => {
+    doc.setFillColor(color[0], color[1], color[2]);
+    if (radius > 0) {
+      doc.roundedRect(x, yPos, w, h, radius, radius, 'F');
     } else {
-      doc.text(safeText, x, yPos, { align, baseline: 'top' } as any);
-      return size * 0.3527 * 1.5;
+      doc.rect(x, yPos, w, h, 'F');
     }
   };
 
-  const formatMoney = (amount: number, currency: string) => {
-    return formatCurrencyForPDF(amount, currency);
-  };
-
-  const drawFooter = (pageNum: number) => {
-    const footerY = pageHeight - 15;
+  const drawFooter = (pNum: number) => {
+    const fy = ph - 12;
+    line(ml, fy - 3, mr, C.border, 0.3);
     
-    doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2]);
-    doc.setLineWidth(0.5);
-    doc.line(PAGE_CONFIG.margin, footerY - 5, pageWidth - PAGE_CONFIG.margin, footerY - 5);
-
-    drawText(`Page ${pageNum}`, pageWidth / 2, footerY, { 
-      size: 8, 
-      color: COLORS.lightText, 
-      align: 'center' 
-    });
-
     if (!removeBranding) {
-      drawText('Generated by InvoicePak', pageWidth - PAGE_CONFIG.margin, footerY, { 
-        size: 7, 
-        color: COLORS.lightText, 
-        align: 'right' 
-      });
+      txt('Generated by InvoicePak', pw / 2, fy, { size: 7, color: C.muted, align: 'center' });
     }
+    txt(`Page ${pNum}`, mr, fy, { size: 7, color: C.muted, align: 'right' });
   };
 
-  const checkPageBreak = (requiredHeight: number) => {
-    if (y + requiredHeight > pageHeight - 20) {
-      drawFooter(pageNumber);
+  const checkBreak = (needed: number): boolean => {
+    if (y + needed > ph - PAGE.footerHeight - 5) {
+      drawFooter(pageNum);
       doc.addPage();
-      pageNumber++;
-      y = PAGE_CONFIG.margin;
+      pageNum++;
+      y = PAGE.margin;
       return true;
     }
     return false;
   };
 
-  // --- START GENERATION ---
+  // ══════════════════════════════════════════════════════
+  // HEADER
+  // ══════════════════════════════════════════════════════
 
-  // === HEADER ===
-  const rightColX = pageWidth - PAGE_CONFIG.margin;
-
-  // Render Logo or Text
+  // Logo / Company Name
   if (invoice.companyLogo) {
     try {
-      doc.addImage(invoice.companyLogo, 'AUTO', PAGE_CONFIG.margin, y, 35, 15);
+      doc.addImage(invoice.companyLogo, 'AUTO', ml, y, 30, 12);
       if (invoice.companyName) {
-        drawText(invoice.companyName, PAGE_CONFIG.margin, y + 18, { 
-          size: 12, 
-          weight: 'bold', 
-          color: COLORS.secondary 
-        });
+        txt(invoice.companyName, ml, y + 14, { size: 11, bold: true, color: C.dark });
       }
-    } catch (e) {
-      console.warn('Failed to render logo in PDF, using text fallback:', e);
-      drawText(invoice.companyName || 'INVOICE', PAGE_CONFIG.margin, y + 5, { 
-        size: 18, 
-        weight: 'bold', 
-        color: COLORS.secondary 
-      });
+    } catch {
+      txt(invoice.companyName || 'INVOICE', ml, y + 3, { size: 20, bold: true, color: C.primary });
     }
   } else {
-    drawText(invoice.companyName || (!removeBranding ? 'InvoicePak' : invoice.senderName || 'INVOICE'), PAGE_CONFIG.margin, y + 5, { 
-      size: 18, 
-      weight: 'bold', 
-      color: COLORS.primary 
-    });
+    const brandName = invoice.companyName || (!removeBranding ? 'InvoicePak' : invoice.senderName || 'INVOICE');
+    txt(brandName, ml, y + 3, { size: 20, bold: true, color: C.primary });
   }
 
-  // Invoice Label (Right Side)
-  drawText('INVOICE', rightColX, y + 5, { 
-    size: 24, 
-    weight: 'bold', 
-    color: COLORS.secondary, 
-    align: 'right' 
-  });
-  
-  drawText(`# ${invoice.invoiceNumber || 'DRAFT'}`, rightColX, y + 15, { 
-    size: 10, 
-    weight: 'bold', 
-    color: COLORS.text, 
-    align: 'right' 
-  });
+  // Right side: INVOICE title
+  txt('INVOICE', mr, y + 2, { size: 26, bold: true, color: C.dark, align: 'right' });
+  txt(`# ${invoice.invoiceNumber || 'DRAFT'}`, mr, y + 14, { size: 10, bold: true, color: C.text, align: 'right' });
 
-  y += 30;
+  y += 28;
 
-  // Divider
-  doc.setDrawColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
-  doc.setLineWidth(0.8);
-  doc.line(PAGE_CONFIG.margin, y, pageWidth - PAGE_CONFIG.margin, y);
-  y += 10;
+  // Orange accent line
+  rect(ml, y, cw, 1.2, C.primary);
+  y += 8;
 
-  // === DETAILS SECTION ===
-  const col1X = PAGE_CONFIG.margin;
-  const col2X = PAGE_CONFIG.margin + 70;
-  const col3X = pageWidth - PAGE_CONFIG.margin - 65;
+  // ══════════════════════════════════════════════════════
+  // INFO SECTION (FROM / BILL TO / DATES)
+  // ══════════════════════════════════════════════════════
+
+  const infoStartY = y;
 
   // FROM
-  drawText('FROM:', col1X, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-  const fromHeight = drawText(invoice.senderName || 'Sender', col1X, y + 5, { 
-    size: 10, 
-    weight: 'bold', 
-    maxWidth: 60 
-  });
+  txt('FROM', ml, y, { size: 7, bold: true, color: C.primary });
+  y += 4;
+  const fromH = txt(invoice.senderName || 'Sender', ml, y, { size: 10, bold: true, color: C.dark, maxWidth: 55 });
 
   // BILL TO
-  drawText('BILL TO:', col2X, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-  const toHeight = drawText(invoice.clientName || 'Client', col2X, y + 5, { 
-    size: 10, 
-    weight: 'bold', 
-    maxWidth: 60 
-  });
+  const col2 = ml + 65;
+  txt('BILL TO', col2, infoStartY, { size: 7, bold: true, color: C.primary });
+  const toH = txt(invoice.clientName || 'Client', col2, infoStartY + 4, { size: 10, bold: true, color: C.dark, maxWidth: 55 });
 
-  // DATES BOX (Right)
-  doc.setFillColor(COLORS.accentBg[0], COLORS.accentBg[1], COLORS.accentBg[2]);
-  doc.roundedRect(col3X, y - 2, 65, 30, 2, 2, 'F');
-  
-  const boxPadX = col3X + 5;
-  const boxPadY = y + 3;
-  const boxValX = pageWidth - PAGE_CONFIG.margin - 5;
+  // DATE BOX (Right aligned)
+  const boxW = 62;
+  const boxX = mr - boxW;
+  const boxH = 32;
+  rect(boxX, infoStartY - 2, boxW, boxH, C.bg, 3);
+
+  const bx = boxX + 5;
+  const bvx = mr - 5;
+  let by = infoStartY + 3;
 
   // Status
-  drawText('Status:', boxPadX, boxPadY, { size: 9 });
-  const statusColor = invoice.status === 'paid' ? COLORS.success : invoice.status === 'sent' ? COLORS.info : COLORS.lightText;
-  drawText((invoice.status || 'draft').toUpperCase(), boxValX, boxPadY, { 
-    size: 9, weight: 'bold', color: statusColor, align: 'right' 
-  });
+  txt('Status', bx, by, { size: 8, color: C.muted });
+  const statusStr = (invoice.status || 'draft').toUpperCase();
+  const statusColor = invoice.status === 'paid' ? C.green : invoice.status === 'sent' ? C.blue : C.muted;
+  txt(statusStr, bvx, by, { size: 8, bold: true, color: statusColor, align: 'right' });
 
-  // Date - safely handle missing/invalid dates
-  const safeInvoiceDate = invoice.invoiceDate ? new Date(invoice.invoiceDate) : new Date();
-  const safeDueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
+  by += 8;
+  // Invoice Date
+  const safeDate = invoice.invoiceDate ? new Date(invoice.invoiceDate) : new Date();
+  txt('Date', bx, by, { size: 8, color: C.muted });
+  txt(isNaN(safeDate.getTime()) ? 'N/A' : format(safeDate, 'dd MMM yyyy'), bvx, by, { size: 8, bold: true, color: C.dark, align: 'right' });
 
-  drawText('Date:', boxPadX, boxPadY + 7, { size: 9 });
-  drawText(
-    isNaN(safeInvoiceDate.getTime()) ? 'N/A' : format(safeInvoiceDate, 'dd MMM yyyy'), 
-    boxValX, boxPadY + 7, { size: 9, weight: 'bold', align: 'right' }
-  );
+  by += 8;
+  // Due Date
+  const safeDue = invoice.dueDate ? new Date(invoice.dueDate) : null;
+  txt('Due Date', bx, by, { size: 8, color: C.muted });
+  txt(safeDue && !isNaN(safeDue.getTime()) ? format(safeDue, 'dd MMM yyyy') : 'N/A', bvx, by, { size: 8, bold: true, color: C.dark, align: 'right' });
 
-  // Due
-  drawText('Due Date:', boxPadX, boxPadY + 14, { size: 9 });
-  drawText(
-    safeDueDate && !isNaN(safeDueDate.getTime()) ? format(safeDueDate, 'dd MMM yyyy') : 'N/A', 
-    boxValX, boxPadY + 14, { size: 9, weight: 'bold', align: 'right' }
-  );
+  y = Math.max(infoStartY + fromH + 8, infoStartY + toH + 8, infoStartY + boxH + 4);
 
-  y = Math.max(y + fromHeight + 10, y + toHeight + 10, y + 35);
+  // ══════════════════════════════════════════════════════
+  // PROJECT DESCRIPTION
+  // ══════════════════════════════════════════════════════
 
-  // === PROJECT DESCRIPTION ===
   if (invoice.serviceDescription) {
-    checkPageBreak(30);
-    drawText('PROJECT DESCRIPTION', PAGE_CONFIG.margin, y, { size: 8, weight: 'bold', color: COLORS.lightText });
+    checkBreak(25);
+    y += 4;
+    txt('PROJECT DESCRIPTION', ml, y, { size: 7, bold: true, color: C.primary });
     y += 5;
-    const descH = drawText(invoice.serviceDescription, PAGE_CONFIG.margin, y, { 
-      size: 9, 
-      maxWidth: contentWidth 
-    });
-    y += descH + 10;
+    const dH = txt(invoice.serviceDescription, ml, y, { size: 9, maxWidth: cw, color: C.text });
+    y += dH + 6;
   }
 
-  // === ITEMS TABLE ===
+  // ══════════════════════════════════════════════════════
+  // ITEMS TABLE
+  // ══════════════════════════════════════════════════════
+
   const hasItems = invoice.items && invoice.items.length > 0;
-  
+
   if (hasItems) {
-    // Define Columns
-    const cols = {
-      desc: { x: PAGE_CONFIG.margin + 2, w: contentWidth * 0.45 },
-      qty: { x: pageWidth - PAGE_CONFIG.margin - 65, w: 15 },
-      rate: { x: pageWidth - PAGE_CONFIG.margin - 35, w: 25 },
-      amount: { x: pageWidth - PAGE_CONFIG.margin - 2, w: 30 }
+    checkBreak(20);
+    y += 2;
+
+    // Column positions
+    const descX = ml + 3;
+    const descW = cw * 0.48;
+    const qtyX = ml + cw * 0.58;
+    const rateX = ml + cw * 0.75;
+    const amtX = mr - 3;
+
+    // Table Header
+    const drawHeader = (curY: number) => {
+      rect(ml, curY, cw, 9, C.dark, 1.5);
+      const hy = curY + 2.5;
+      txt('DESCRIPTION', descX, hy, { size: 7.5, bold: true, color: C.white });
+      txt('QTY', qtyX, hy, { size: 7.5, bold: true, color: C.white, align: 'center' });
+      txt('RATE', rateX, hy, { size: 7.5, bold: true, color: C.white, align: 'right' });
+      txt('AMOUNT', amtX, hy, { size: 7.5, bold: true, color: C.white, align: 'right' });
+      return 9;
     };
 
-    const drawTableHeader = (curY: number) => {
-      doc.setFillColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
-      doc.rect(PAGE_CONFIG.margin, curY, contentWidth, 8, 'F');
-      const ty = curY + 2;
-      drawText('DESCRIPTION', cols.desc.x, ty, { size: 8, weight: 'bold', color: COLORS.white });
-      drawText('QTY', cols.qty.x, ty, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' }); 
-      drawText('RATE', cols.rate.x, ty, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
-      drawText('AMOUNT', cols.amount.x, ty, { size: 8, weight: 'bold', color: COLORS.white, align: 'right' });
-      return 8;
-    };
+    y += drawHeader(y);
 
-    y += drawTableHeader(y);
-
-    invoice.items!.forEach((item, index) => {
-      const padding = 4;
-      
-      // Calculate Height Needed
+    invoice.items!.forEach((item, idx) => {
       const descText = item.description || 'No description';
-      const descLines = doc.splitTextToSize(descText, cols.desc.w);
-      const lineHeight = 4; 
-      const neededHeight = (descLines.length * lineHeight) + (padding * 2); 
-      
-      // Check Break
-      if (checkPageBreak(neededHeight)) {
-        y += drawTableHeader(y);
-      }
-
-      // Background Striping
-      if (index % 2 === 0) {
-        doc.setFillColor(COLORS.accentBg[0], COLORS.accentBg[1], COLORS.accentBg[2]);
-        doc.rect(PAGE_CONFIG.margin, y, contentWidth, neededHeight, 'F');
-      }
-
-      const textY = y + padding;
-
-      // Description (Wrapped)
       doc.setFontSize(9);
-      doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+      const lines = doc.splitTextToSize(descText, descW);
+      const rowH = Math.max(lines.length * 5, 8) + 5;
+
+      if (checkBreak(rowH)) {
+        y += drawHeader(y);
+      }
+
+      // Zebra striping
+      if (idx % 2 === 0) {
+        rect(ml, y, cw, rowH, C.bg);
+      }
+
+      const ty = y + 3;
+
+      // Description
+      doc.setFontSize(9);
+      doc.setTextColor(C.text[0], C.text[1], C.text[2]);
       doc.setFont('helvetica', 'normal');
-      doc.text(descLines, cols.desc.x, textY, { baseline: 'top' } as any);
+      doc.text(lines, descX, ty, { baseline: 'top' } as any);
 
-      // Numbers
-      drawText(String(item.quantity || 0), cols.qty.x, textY, { size: 9, align: 'right' });
-      drawText(formatMoney(item.rate || 0, invoice.currency), cols.rate.x, textY, { size: 9, align: 'right' });
-      drawText(formatMoney(item.amount || 0, invoice.currency), cols.amount.x, textY, { size: 9, weight: 'bold', align: 'right' });
+      // Qty, Rate, Amount
+      txt(String(item.quantity || 0), qtyX, ty, { size: 9, color: C.text, align: 'center' });
+      txt(money(item.rate || 0, invoice.currency), rateX, ty, { size: 9, color: C.text, align: 'right' });
+      txt(money(item.amount || 0, invoice.currency), amtX, ty, { size: 9, bold: true, color: C.dark, align: 'right' });
 
-      y += neededHeight;
+      y += rowH;
 
-      // Border line
-      doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2]);
-      doc.setLineWidth(0.1);
-      doc.line(PAGE_CONFIG.margin, y, pageWidth - PAGE_CONFIG.margin, y);
+      // Row border
+      line(ml, y, mr, C.border, 0.15);
     });
   } else {
-    // Fallback: single amount row when no line items
-    checkPageBreak(20);
-    drawText('AMOUNT', PAGE_CONFIG.margin, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-    y += 6;
-    drawText(formatMoney(invoice.amount || 0, invoice.currency), PAGE_CONFIG.margin, y, { 
-      size: 14, weight: 'bold', color: COLORS.secondary 
-    });
-    y += 10;
+    // No items — show single amount
+    checkBreak(20);
+    y += 4;
+    txt('TOTAL AMOUNT', ml, y, { size: 7, bold: true, color: C.primary });
+    y += 5;
+    txt(money(invoice.amount || 0, invoice.currency), ml, y, { size: 16, bold: true, color: C.dark });
+    y += 12;
   }
 
   y += 10;
 
-  // === TOTALS SECTION ===
-  checkPageBreak(50);
+  // ══════════════════════════════════════════════════════
+  // TOTALS + NOTES
+  // ══════════════════════════════════════════════════════
 
-  const totalAmount = hasItems 
-    ? invoice.items!.reduce((sum, item) => sum + (item.amount || 0), 0) 
+  checkBreak(55);
+
+  const totalAmount = hasItems
+    ? invoice.items!.reduce((sum, item) => sum + (item.amount || 0), 0)
     : (invoice.amount || 0);
-  
-  const convRate = invoice.conversionRate || 1;
-  const convertedAmount = invoice.currency === 'USD' 
-    ? totalAmount * convRate 
-    : totalAmount / convRate;
-  const convertedCurrency = invoice.currency === 'USD' ? 'PKR' : 'USD';
 
-  // Notes (Left)
+  const convRate = invoice.conversionRate || 1;
+  const convertedAmt = invoice.currency === 'USD'
+    ? totalAmount * convRate
+    : totalAmount / convRate;
+  const convertedCurr = invoice.currency === 'USD' ? 'PKR' : 'USD';
+
+  // Notes (left side)
   if (invoice.notes) {
-    drawText('NOTES:', PAGE_CONFIG.margin, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-    drawText(invoice.notes, PAGE_CONFIG.margin, y + 5, { 
-      size: 8, 
-      maxWidth: contentWidth * 0.5, 
-      color: COLORS.lightText 
-    });
+    txt('NOTES', ml, y, { size: 7, bold: true, color: C.primary });
+    txt(invoice.notes, ml, y + 5, { size: 8, maxWidth: cw * 0.48, color: C.muted });
   }
 
-  // Totals Box (Right)
-  const totalsW = contentWidth * 0.4;
-  const totalsX = pageWidth - PAGE_CONFIG.margin - totalsW;
-  
-  doc.setFillColor(COLORS.accentBg[0], COLORS.accentBg[1], COLORS.accentBg[2]);
-  doc.roundedRect(totalsX, y, totalsW, 40, 2, 2, 'F');
+  // Totals box (right side)
+  const totW = cw * 0.42;
+  const totX = mr - totW;
 
-  let tY = y + 5;
-  const tLabelX = totalsX + 5;
-  const tValX = pageWidth - PAGE_CONFIG.margin - 5;
+  rect(totX, y - 2, totW, 48, C.bg, 3);
 
-  drawText(`Subtotal (${invoice.currency})`, tLabelX, tY, { size: 9 });
-  drawText(formatMoney(totalAmount, invoice.currency), tValX, tY, { size: 9, weight: 'bold', align: 'right' });
+  let tY = y + 4;
+  const tl = totX + 6;
+  const tv = mr - 6;
 
-  tY += 8;
-  drawText('Exchange Rate', tLabelX, tY, { size: 9 });
-  drawText(`1 USD = ${convRate.toFixed(2)} PKR`, tValX, tY, { size: 9, align: 'right' });
+  // Subtotal
+  txt(`Subtotal (${invoice.currency})`, tl, tY, { size: 9, color: C.text });
+  txt(money(totalAmount, invoice.currency), tv, tY, { size: 9, bold: true, color: C.dark, align: 'right' });
 
-  tY += 8;
-  doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2]);
-  doc.line(totalsX + 5, tY, pageWidth - PAGE_CONFIG.margin - 5, tY);
-  
-  tY += 5;
-  drawText(`Total (${convertedCurrency})`, tLabelX, tY, { size: 10, weight: 'bold', color: COLORS.primary });
-  drawText(formatMoney(convertedAmount, convertedCurrency), tValX, tY, { size: 12, weight: 'bold', color: COLORS.primary, align: 'right' });
+  tY += 9;
+  // Exchange rate
+  txt('Exchange Rate', tl, tY, { size: 9, color: C.muted });
+  txt(`1 USD = ${convRate.toFixed(2)} PKR`, tv, tY, { size: 8, color: C.text, align: 'right' });
 
-  // Final Footer
-  drawFooter(pageNumber);
+  tY += 9;
+  // Divider
+  line(tl, tY, tv, C.border, 0.3);
 
-  // Download
+  tY += 6;
+  // Total in converted currency (highlighted)
+  rect(totX + 3, tY - 3, totW - 6, 14, C.primaryLight, 2);
+  txt(`Total (${convertedCurr})`, tl + 2, tY, { size: 10, bold: true, color: C.primary });
+  txt(money(convertedAmt, convertedCurr), tv - 2, tY, { size: 13, bold: true, color: C.primary, align: 'right' });
+
+  // ── Thank You ──
+  y = Math.max(y + 55, tY + 20);
+  checkBreak(15);
+  txt('Thank you for your business!', pw / 2, y, { size: 9, color: C.muted, align: 'center' });
+
+  // Footer
+  drawFooter(pageNum);
+
+  // Save
   doc.save(`Invoice-${invoice.invoiceNumber || 'draft'}.pdf`);
 };
