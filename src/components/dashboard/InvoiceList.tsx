@@ -3,7 +3,7 @@ import { Invoice } from '@/types/invoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign, Link2, Crown } from 'lucide-react';
+import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign, Link2, Crown, Pencil } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 import { Link } from 'react-router-dom';
@@ -144,6 +144,12 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem asChild className="gap-2 text-xs">
+                    <Link to={`/dashboard/create?edit=${invoice.id}`}>
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit Invoice
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={(e) => handleDownloadPDF(invoice, e as unknown as React.MouseEvent)}
                     className="gap-2 text-xs"
