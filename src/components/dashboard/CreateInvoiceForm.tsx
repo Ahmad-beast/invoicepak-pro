@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ import { useNoteTemplates } from '@/hooks/useNoteTemplates';
 import { useInvoiceTemplates } from '@/hooks/useInvoiceTemplates';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
   ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, BookOpen, 
@@ -65,10 +65,14 @@ export const CreateInvoiceForm = () => {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(['client-basics']);
 
-  const { createInvoice } = useInvoices();
+  const { invoices, createInvoice, updateInvoice } = useInvoices();
   const { templates: noteTemplates, addTemplate: addNoteTemplate, deleteTemplate: deleteNoteTemplate } = useNoteTemplates();
   const { canCreateInvoice, getRemainingInvoices, incrementInvoiceCount, canUseFeature, subscription, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const editingInvoice = editId ? invoices.find(inv => inv.id === editId) : null;
+  const isEditing = !!editingInvoice;
   
   const defaultRate = getDefaultRateToPKR(currency);
   const activeRate = useCustomRate && customRate ? parseFloat(customRate) : defaultRate;
@@ -80,6 +84,31 @@ export const CreateInvoiceForm = () => {
   const [paymentTermsDays, setPaymentTermsDays] = useState<number | undefined>(undefined);
 
   const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
+  // Pre-fill form when editing an existing invoice
+  const [editLoaded, setEditLoaded] = useState(false);
+  useEffect(() => {
+    if (editingInvoice && !editLoaded) {
+      setClientName(editingInvoice.clientName || '');
+      setServiceDescription(editingInvoice.serviceDescription || '');
+      setCurrency(editingInvoice.currency || 'USD');
+      setStatus(editingInvoice.status || 'draft');
+      setInvoiceDate(editingInvoice.invoiceDate ? new Date(editingInvoice.invoiceDate) : new Date());
+      setDueDate(editingInvoice.dueDate ? new Date(editingInvoice.dueDate) : undefined);
+      setNotes(editingInvoice.notes || '');
+      if (editingInvoice.items && editingInvoice.items.length > 0) {
+        setItems(editingInvoice.items);
+      }
+      if (editingInvoice.invoicePrefix) setInvoicePrefix(editingInvoice.invoicePrefix);
+      if (editingInvoice.companyName) setCompanyName(editingInvoice.companyName);
+      if (editingInvoice.companyLogo) setCompanyLogo(editingInvoice.companyLogo);
+      if (editingInvoice.customExchangeRate) {
+        setUseCustomRate(true);
+        setCustomRate(String(editingInvoice.customExchangeRate));
+      }
+      setEditLoaded(true);
+    }
+  }, [editingInvoice, editLoaded]);
 
   // Progress calculation
   const formProgress = useMemo(() => {
@@ -181,7 +210,7 @@ export const CreateInvoiceForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canCreate) {
+    if (!isEditing && !canCreate) {
       toast.error("You've reached your monthly invoice limit. Upgrade to Pro for unlimited invoices.");
       return;
     }
@@ -198,29 +227,55 @@ export const CreateInvoiceForm = () => {
     }
 
     setIsSubmitting(true);
-    const invoice = await createInvoice({
-      clientName,
-      serviceDescription,
-      amount: totalAmount,
-      currency,
-      status,
-      invoiceDate: invoiceDate.toISOString(),
-      dueDate: dueDate.toISOString(),
-      senderName,
-      notes: notes || undefined,
-      customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
-      invoicePrefix: invoicePrefix.trim() || undefined,
-      items: validItems,
-      companyName: isPro && companyName.trim() ? companyName.trim() : undefined,
-      companyLogo: isPro && companyLogo ? companyLogo : undefined,
-    });
 
-    if (invoice) {
-      await incrementInvoiceCount();
-      toast.success('Invoice created successfully!');
-      navigate('/dashboard');
+    const rateToPKR = useCustomRate && canUseCustomRate ? parseFloat(customRate) : getDefaultRateToPKR(currency);
+    const convertedAmount = currency === 'PKR' ? totalAmount / rateToPKR : totalAmount * rateToPKR;
+
+    if (isEditing && editId) {
+      const success = await updateInvoice(editId, {
+        clientName,
+        serviceDescription,
+        amount: totalAmount,
+        currency,
+        status,
+        invoiceDate: invoiceDate.toISOString(),
+        dueDate: dueDate.toISOString(),
+        senderName,
+        notes: notes || '',
+        customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
+        items: validItems,
+        companyName: isPro && companyName.trim() ? companyName.trim() : undefined,
+        companyLogo: isPro && companyLogo ? companyLogo : undefined,
+        convertedAmount: Math.round(convertedAmount * 100) / 100,
+        conversionRate: rateToPKR,
+        paidAt: status === 'paid' ? (editingInvoice?.paidAt || new Date().toISOString()) : null,
+      });
+      if (success) navigate('/dashboard');
     } else {
-      toast.error('Failed to create invoice');
+      const invoice = await createInvoice({
+        clientName,
+        serviceDescription,
+        amount: totalAmount,
+        currency,
+        status,
+        invoiceDate: invoiceDate.toISOString(),
+        dueDate: dueDate.toISOString(),
+        senderName,
+        notes: notes || undefined,
+        customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
+        invoicePrefix: invoicePrefix.trim() || undefined,
+        items: validItems,
+        companyName: isPro && companyName.trim() ? companyName.trim() : undefined,
+        companyLogo: isPro && companyLogo ? companyLogo : undefined,
+      });
+
+      if (invoice) {
+        await incrementInvoiceCount();
+        toast.success('Invoice created successfully!');
+        navigate('/dashboard');
+      } else {
+        toast.error('Failed to create invoice');
+      }
     }
     setIsSubmitting(false);
   };
@@ -258,8 +313,8 @@ export const CreateInvoiceForm = () => {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl text-foreground">Create New Invoice</CardTitle>
-              <CardDescription>Fill in the details below to generate a professional invoice</CardDescription>
+              <CardTitle className="text-2xl text-foreground">{isEditing ? 'Edit Invoice' : 'Create New Invoice'}</CardTitle>
+              <CardDescription>{isEditing ? `Editing invoice #${editingInvoice?.invoiceNumber}` : 'Fill in the details below to generate a professional invoice'}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               {subscription && remainingInvoices !== Infinity && (
@@ -813,14 +868,14 @@ export const CreateInvoiceForm = () => {
                 type="submit" 
                 size="lg" 
                 className="w-full shadow-lg shadow-primary/20 h-12 text-base font-medium"
-                disabled={isSubmitting || !canCreate}
+                disabled={isSubmitting || (!isEditing && !canCreate)}
               >
                 {isSubmitting ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating Invoice...</>
-                ) : !canCreate ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEditing ? 'Updating...' : 'Creating Invoice...'}</>
+                ) : !isEditing && !canCreate ? (
                   <><Lock className="w-4 h-4 mr-2" />Limit Reached</>
                 ) : (
-                  'Create Invoice'
+                  isEditing ? 'Update Invoice' : 'Create Invoice'
                 )}
               </Button>
             </div>
