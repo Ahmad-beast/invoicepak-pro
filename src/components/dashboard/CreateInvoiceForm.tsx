@@ -85,6 +85,31 @@ export const CreateInvoiceForm = () => {
 
   const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
 
+  // Pre-fill form when editing an existing invoice
+  const [editLoaded, setEditLoaded] = useState(false);
+  useEffect(() => {
+    if (editingInvoice && !editLoaded) {
+      setClientName(editingInvoice.clientName || '');
+      setServiceDescription(editingInvoice.serviceDescription || '');
+      setCurrency(editingInvoice.currency || 'USD');
+      setStatus(editingInvoice.status || 'draft');
+      setInvoiceDate(editingInvoice.invoiceDate ? new Date(editingInvoice.invoiceDate) : new Date());
+      setDueDate(editingInvoice.dueDate ? new Date(editingInvoice.dueDate) : undefined);
+      setNotes(editingInvoice.notes || '');
+      if (editingInvoice.items && editingInvoice.items.length > 0) {
+        setItems(editingInvoice.items);
+      }
+      if (editingInvoice.invoicePrefix) setInvoicePrefix(editingInvoice.invoicePrefix);
+      if (editingInvoice.companyName) setCompanyName(editingInvoice.companyName);
+      if (editingInvoice.companyLogo) setCompanyLogo(editingInvoice.companyLogo);
+      if (editingInvoice.customExchangeRate) {
+        setUseCustomRate(true);
+        setCustomRate(String(editingInvoice.customExchangeRate));
+      }
+      setEditLoaded(true);
+    }
+  }, [editingInvoice, editLoaded]);
+
   // Progress calculation
   const formProgress = useMemo(() => {
     let filled = 0;
