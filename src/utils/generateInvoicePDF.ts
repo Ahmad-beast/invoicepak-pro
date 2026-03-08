@@ -25,25 +25,21 @@ const COLORS = {
 };
 
 export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = false): void => {
-  // Initialize PDF
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
 
-  // Dimensions
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const contentWidth = pageWidth - (PAGE_CONFIG.margin * 2);
   
-  // State
   let y = PAGE_CONFIG.margin;
   let pageNumber = 1;
 
   // --- HELPER FUNCTIONS ---
 
-  // 1. Text Writer with Strict Wrapping
   const drawText = (
     text: string | number,
     x: number,
@@ -68,15 +64,11 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     doc.setTextColor(color[0], color[1], color[2]);
     doc.setFont('helvetica', weight);
 
-    const safeText = String(text || '');
+    const safeText = String(text ?? '');
 
     if (maxWidth) {
-      // Split text to fit width
       const lines = doc.splitTextToSize(safeText, maxWidth);
-      // 'as any' fixes the TypeScript error where 'baseline' is not recognized in strict types
       doc.text(lines, x, yPos, { align, baseline: 'top' } as any);
-      
-      // Return exact height used
       const lineHeightMm = size * 0.3527 * 1.5; 
       return lines.length * lineHeightMm; 
     } else {
@@ -85,12 +77,10 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     }
   };
 
-  // 2. Format Currency
   const formatMoney = (amount: number, currency: string) => {
     return formatCurrencyForPDF(amount, currency);
   };
 
-  // 3. Draw Footer
   const drawFooter = (pageNum: number) => {
     const footerY = pageHeight - 15;
     
@@ -113,7 +103,6 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     }
   };
 
-  // 4. Page Break Logic
   const checkPageBreak = (requiredHeight: number) => {
     if (y + requiredHeight > pageHeight - 20) {
       drawFooter(pageNumber);
@@ -133,17 +122,16 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   // Render Logo or Text
   if (invoice.companyLogo) {
     try {
-      // doc.addImage requires string | HTMLImageElement. invoice.companyLogo is string.
       doc.addImage(invoice.companyLogo, 'AUTO', PAGE_CONFIG.margin, y, 35, 15);
       if (invoice.companyName) {
-        drawText(invoice.companyName, PAGE_CONFIG.margin, y + 20, { 
+        drawText(invoice.companyName, PAGE_CONFIG.margin, y + 18, { 
           size: 12, 
           weight: 'bold', 
           color: COLORS.secondary 
         });
       }
     } catch (e) {
-      // Fallback
+      console.warn('Failed to render logo in PDF, using text fallback:', e);
       drawText(invoice.companyName || 'INVOICE', PAGE_CONFIG.margin, y + 5, { 
         size: 18, 
         weight: 'bold', 
@@ -166,14 +154,14 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     align: 'right' 
   });
   
-  drawText(`# ${invoice.invoiceNumber}`, rightColX, y + 15, { 
+  drawText(`# ${invoice.invoiceNumber || 'DRAFT'}`, rightColX, y + 15, { 
     size: 10, 
     weight: 'bold', 
     color: COLORS.text, 
     align: 'right' 
   });
 
-  y += 30; // Move down after header
+  y += 30;
 
   // Divider
   doc.setDrawColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
@@ -188,7 +176,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
 
   // FROM
   drawText('FROM:', col1X, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-  const fromHeight = drawText(invoice.senderName || '', col1X, y + 5, { 
+  const fromHeight = drawText(invoice.senderName || 'Sender', col1X, y + 5, { 
     size: 10, 
     weight: 'bold', 
     maxWidth: 60 
@@ -196,7 +184,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
 
   // BILL TO
   drawText('BILL TO:', col2X, y, { size: 8, weight: 'bold', color: COLORS.lightText });
-  const toHeight = drawText(invoice.clientName || '', col2X, y + 5, { 
+  const toHeight = drawText(invoice.clientName || 'Client', col2X, y + 5, { 
     size: 10, 
     weight: 'bold', 
     maxWidth: 60 
@@ -212,24 +200,29 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
 
   // Status
   drawText('Status:', boxPadX, boxPadY, { size: 9 });
-  const statusColor = invoice.status === 'paid' ? COLORS.success : COLORS.info;
-  drawText(invoice.status.toUpperCase(), boxValX, boxPadY, { 
+  const statusColor = invoice.status === 'paid' ? COLORS.success : invoice.status === 'sent' ? COLORS.info : COLORS.lightText;
+  drawText((invoice.status || 'draft').toUpperCase(), boxValX, boxPadY, { 
     size: 9, weight: 'bold', color: statusColor, align: 'right' 
   });
 
-  // Date
+  // Date - safely handle missing/invalid dates
+  const safeInvoiceDate = invoice.invoiceDate ? new Date(invoice.invoiceDate) : new Date();
+  const safeDueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
+
   drawText('Date:', boxPadX, boxPadY + 7, { size: 9 });
-  drawText(format(new Date(invoice.invoiceDate), 'dd MMM yyyy'), boxValX, boxPadY + 7, { 
-    size: 9, weight: 'bold', align: 'right' 
-  });
+  drawText(
+    isNaN(safeInvoiceDate.getTime()) ? 'N/A' : format(safeInvoiceDate, 'dd MMM yyyy'), 
+    boxValX, boxPadY + 7, { size: 9, weight: 'bold', align: 'right' }
+  );
 
   // Due
   drawText('Due Date:', boxPadX, boxPadY + 14, { size: 9 });
-  drawText(format(new Date(invoice.dueDate), 'dd MMM yyyy'), boxValX, boxPadY + 14, { 
-    size: 9, weight: 'bold', align: 'right' 
-  });
+  drawText(
+    safeDueDate && !isNaN(safeDueDate.getTime()) ? format(safeDueDate, 'dd MMM yyyy') : 'N/A', 
+    boxValX, boxPadY + 14, { size: 9, weight: 'bold', align: 'right' }
+  );
 
-  y = Math.max(y + fromHeight + 10, y + toHeight + 10, y + 35); // Safe push down
+  y = Math.max(y + fromHeight + 10, y + toHeight + 10, y + 35);
 
   // === PROJECT DESCRIPTION ===
   if (invoice.serviceDescription) {
@@ -243,14 +236,16 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     y += descH + 10;
   }
 
-  // === ITEMS TABLE (FIXED) ===
-  if (invoice.items && invoice.items.length > 0) {
+  // === ITEMS TABLE ===
+  const hasItems = invoice.items && invoice.items.length > 0;
+  
+  if (hasItems) {
     // Define Columns
     const cols = {
       desc: { x: PAGE_CONFIG.margin + 2, w: contentWidth * 0.45 },
-      qty: { x: pageWidth - PAGE_CONFIG.margin - 65, w: 15, align: 'center' },
-      rate: { x: pageWidth - PAGE_CONFIG.margin - 35, w: 25, align: 'right' },
-      amount: { x: pageWidth - PAGE_CONFIG.margin - 2, w: 30, align: 'right' }
+      qty: { x: pageWidth - PAGE_CONFIG.margin - 65, w: 15 },
+      rate: { x: pageWidth - PAGE_CONFIG.margin - 35, w: 25 },
+      amount: { x: pageWidth - PAGE_CONFIG.margin - 2, w: 30 }
     };
 
     const drawTableHeader = (curY: number) => {
@@ -266,11 +261,12 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
 
     y += drawTableHeader(y);
 
-    invoice.items.forEach((item, index) => {
+    invoice.items!.forEach((item, index) => {
       const padding = 4;
       
-      // Calculate Height Needed based on Description
-      const descLines = doc.splitTextToSize(item.description, cols.desc.w);
+      // Calculate Height Needed
+      const descText = item.description || 'No description';
+      const descLines = doc.splitTextToSize(descText, cols.desc.w);
       const lineHeight = 4; 
       const neededHeight = (descLines.length * lineHeight) + (padding * 2); 
       
@@ -285,18 +281,18 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
         doc.rect(PAGE_CONFIG.margin, y, contentWidth, neededHeight, 'F');
       }
 
-      // Draw Content
       const textY = y + padding;
 
       // Description (Wrapped)
       doc.setFontSize(9);
       doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+      doc.setFont('helvetica', 'normal');
       doc.text(descLines, cols.desc.x, textY, { baseline: 'top' } as any);
 
       // Numbers
-      drawText(item.quantity.toString(), cols.qty.x, textY, { size: 9, align: 'right' });
-      drawText(formatMoney(item.rate, invoice.currency), cols.rate.x, textY, { size: 9, align: 'right' });
-      drawText(formatMoney(item.amount, invoice.currency), cols.amount.x, textY, { size: 9, weight: 'bold', align: 'right' });
+      drawText(String(item.quantity || 0), cols.qty.x, textY, { size: 9, align: 'right' });
+      drawText(formatMoney(item.rate || 0, invoice.currency), cols.rate.x, textY, { size: 9, align: 'right' });
+      drawText(formatMoney(item.amount || 0, invoice.currency), cols.amount.x, textY, { size: 9, weight: 'bold', align: 'right' });
 
       y += neededHeight;
 
@@ -305,20 +301,30 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
       doc.setLineWidth(0.1);
       doc.line(PAGE_CONFIG.margin, y, pageWidth - PAGE_CONFIG.margin, y);
     });
+  } else {
+    // Fallback: single amount row when no line items
+    checkPageBreak(20);
+    drawText('AMOUNT', PAGE_CONFIG.margin, y, { size: 8, weight: 'bold', color: COLORS.lightText });
+    y += 6;
+    drawText(formatMoney(invoice.amount || 0, invoice.currency), PAGE_CONFIG.margin, y, { 
+      size: 14, weight: 'bold', color: COLORS.secondary 
+    });
+    y += 10;
   }
 
   y += 10;
 
   // === TOTALS SECTION ===
-  checkPageBreak(50); // Ensure space for totals
+  checkPageBreak(50);
 
-  const totalAmount = invoice.items 
-    ? invoice.items.reduce((sum, item) => sum + item.amount, 0) 
-    : invoice.amount;
+  const totalAmount = hasItems 
+    ? invoice.items!.reduce((sum, item) => sum + (item.amount || 0), 0) 
+    : (invoice.amount || 0);
   
+  const convRate = invoice.conversionRate || 1;
   const convertedAmount = invoice.currency === 'USD' 
-    ? totalAmount * invoice.conversionRate 
-    : totalAmount / invoice.conversionRate;
+    ? totalAmount * convRate 
+    : totalAmount / convRate;
   const convertedCurrency = invoice.currency === 'USD' ? 'PKR' : 'USD';
 
   // Notes (Left)
@@ -347,7 +353,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
 
   tY += 8;
   drawText('Exchange Rate', tLabelX, tY, { size: 9 });
-  drawText(`1 USD = ${invoice.conversionRate.toFixed(2)} PKR`, tValX, tY, { size: 9, align: 'right' });
+  drawText(`1 USD = ${convRate.toFixed(2)} PKR`, tValX, tY, { size: 9, align: 'right' });
 
   tY += 8;
   doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2]);
