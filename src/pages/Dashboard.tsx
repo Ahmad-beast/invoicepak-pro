@@ -62,12 +62,15 @@ const Dashboard = () => {
               }
             </p>
           </div>
-          <Link to="/dashboard/create">
-            <Button className="gap-2 glow-primary font-semibold h-10">
-              <Plus className="w-4 h-4" />
-              New Invoice
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <WhatsNewDialog />
+            <Link to="/dashboard/create">
+              <Button className="gap-2 glow-primary font-semibold h-10">
+                <Plus className="w-4 h-4" />
+                New Invoice
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Empty State */}
