@@ -3,7 +3,7 @@ import { CurrencyCode, CurrencyConfig } from '@/types/invoice';
 // Currency configuration with symbols and locales
 export const CURRENCY_CONFIG: Record<CurrencyCode, CurrencyConfig> = {
   USD: { code: 'USD', symbol: '$', name: 'US Dollar', locale: 'en-US' },
-  PKR: { code: 'PKR', symbol: '₨', name: 'Pakistani Rupee', locale: 'en-PK' },
+  PKR: { code: 'PKR', symbol: '₨', name: 'Pakistani Rupee', locale: 'en-PK', useCodeFallback: true },
   GBP: { code: 'GBP', symbol: '£', name: 'British Pound', locale: 'en-GB' },
   EUR: { code: 'EUR', symbol: '€', name: 'Euro', locale: 'de-DE' },
   AED: { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', locale: 'ar-AE', useCodeFallback: true },
