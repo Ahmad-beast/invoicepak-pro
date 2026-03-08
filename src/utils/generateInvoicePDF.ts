@@ -286,10 +286,11 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   let rateLabel: string;
 
   if (invoiceCurr === 'PKR') {
-    // PKR invoice → show USD equivalent
-    convertedAmt = totalAmount / convRate;
+    // PKR invoice → show USD equivalent using proper USD-to-PKR rate
+    const usdToPkr = convRate > 1 ? convRate : DEFAULT_RATES_TO_PKR['USD'];
+    convertedAmt = totalAmount / usdToPkr;
     convertedCurr = 'USD';
-    rateLabel = `1 USD = ${convRate.toFixed(2)} PKR`;
+    rateLabel = `1 USD = ${usdToPkr.toFixed(2)} PKR`;
   } else {
     // Any non-PKR currency → show PKR equivalent
     convertedAmt = totalAmount * convRate;
