@@ -77,7 +77,7 @@ const Admin = () => {
   const { isAdmin, isRoleLoading: roleLoading } = useAuth();
   const { users, loading: usersLoading, refetch, grantProAccess, revokeProAccess, toggleBanStatus, deleteUser } = useAdminUsers();
   const { feedbacks, loading: feedbacksLoading, refetch: refetchFeedbacks, markAsRead } = useFeedback();
-  const { sourceStats, totalVisits, loading: referralsLoading, refetch: refetchReferrals } = useReferrals();
+  const { sourceStats, totalVisits, todayCount: todayReferralsCount, weekCount: weekReferrals, dailyCounts, deviceBreakdown, browserBreakdown, hourlyToday, recentVisits, loading: referralsLoading } = useReferrals();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
