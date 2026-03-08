@@ -939,5 +939,6 @@ export const CreateInvoiceForm = () => {
         />
       </div>
     </div>
+    </>
   );
 };
