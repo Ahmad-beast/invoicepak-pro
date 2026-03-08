@@ -1,5 +1,6 @@
 import { FileText, Mail, Twitter, Linkedin, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import React from 'react';
 
 const footerLinks = {
   product: [
@@ -8,9 +9,8 @@ const footerLinks = {
     { label: 'FAQ', href: '#faq' },
   ],
   company: [
-    { label: 'About Us', href: '#' },
-    { label: 'Blog', href: '#' },
-    { label: 'Careers', href: '#' },
+    { label: 'Blog', href: '/blog', isRoute: true },
+    { label: 'My Story', href: '/my-story', isRoute: true },
   ],
   legal: [
     { label: 'Privacy Policy', href: '/privacy', isRoute: true },
@@ -26,7 +26,7 @@ const socialLinks = [
   { icon: Mail, href: 'mailto:hello@invoicepk.com', label: 'Email' },
 ];
 
-export const Footer = () => {
+export const Footer = React.forwardRef<HTMLElement>((_, ref) => {
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (href.startsWith('#') && href.length > 1) {
       e.preventDefault();
@@ -38,7 +38,7 @@ export const Footer = () => {
   };
 
   return (
-    <footer className="py-16 px-4 border-t border-border bg-card/50">
+    <footer ref={ref} className="py-16 px-4 border-t border-border bg-card/50">
       <div className="container mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand */}
@@ -49,7 +49,7 @@ export const Footer = () => {
               </div>
               <span className="text-xl font-bold text-foreground">InvoicePK</span>
             </Link>
-            <p className="text-muted-foreground text-sm mb-4 max-w-xs">
+            <p className="text-muted-foreground text-sm mb-4 max-w-xs leading-relaxed">
               The simplest way for Pakistani freelancers to create professional invoices with automatic USD to PKR conversion.
             </p>
             <div className="flex gap-3">
@@ -68,7 +68,7 @@ export const Footer = () => {
 
           {/* Product Links */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Product</h4>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Product</h4>
             <ul className="space-y-3">
               {footerLinks.product.map((link) => (
                 <li key={link.label}>
@@ -86,26 +86,9 @@ export const Footer = () => {
 
           {/* Company Links */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Company</h4>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Company</h4>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal Links */}
-          <div>
-            <h4 className="font-semibold text-foreground mb-4">Legal</h4>
-            <ul className="space-y-3">
-              {footerLinks.legal.map((link) => (
                 <li key={link.label}>
                   {'isRoute' in link && link.isRoute ? (
                     <Link
@@ -126,6 +109,23 @@ export const Footer = () => {
               ))}
             </ul>
           </div>
+
+          {/* Legal Links */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Legal</h4>
+            <ul className="space-y-3">
+              {footerLinks.legal.map((link) => (
+                <li key={link.label}>
+                  <Link
+                    to={link.href}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* Bottom bar */}
@@ -140,4 +140,6 @@ export const Footer = () => {
       </div>
     </footer>
   );
-};
+});
+
+Footer.displayName = 'Footer';
