@@ -9,8 +9,10 @@ import { toast } from 'sonner';
 import { FileText, ArrowLeft } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { SEO } from '@/components/SEO';
+import { useReferralTracker } from '@/hooks/useReferralTracker';
 
 const Signup = () => {
+  useReferralTracker();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
