@@ -252,6 +252,7 @@ export const CreateInvoiceForm = () => {
         convertedAmount: Math.round(convertedAmount * 100) / 100,
         conversionRate: rateToPKR,
         paidAt: status === 'paid' ? (editingInvoice?.paidAt || new Date().toISOString()) : null,
+        showExchangeRate,
       });
       if (success) navigate('/dashboard');
     } else {
