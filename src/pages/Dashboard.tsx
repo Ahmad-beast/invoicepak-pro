@@ -1,4 +1,5 @@
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { WhatsNewDialog } from '@/components/dashboard/WhatsNewDialog';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { DashboardStatsSkeleton } from '@/components/dashboard/DashboardStatsSkeleton';
 import { MonthlySummary } from '@/components/dashboard/MonthlySummary';
