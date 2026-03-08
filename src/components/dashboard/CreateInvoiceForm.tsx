@@ -276,8 +276,7 @@ export const CreateInvoiceForm = () => {
 
       if (invoice) {
         await incrementInvoiceCount();
-        toast.success('Invoice created successfully!');
-        navigate('/dashboard');
+        setShowSuccess(true);
       } else {
         toast.error('Failed to create invoice');
       }
