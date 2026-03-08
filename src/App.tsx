@@ -26,6 +26,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookieSettings from "./pages/CookieSettings";
 import MyStory from "./pages/MyStory";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,14 @@ const App = () => {
                   element={
                     <AuthGate>
                       <Admin />
+                    </AuthGate>
+                  }
+                />
+                <Route
+                  path="/dashboard/profile"
+                  element={
+                    <AuthGate>
+                      <Profile />
                     </AuthGate>
                   }
                 />
