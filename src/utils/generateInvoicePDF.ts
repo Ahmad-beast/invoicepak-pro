@@ -307,7 +307,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   // Totals box (right side)
   const totW = cw * 0.42;
   const totX = mr - totW;
-  const boxH = shouldShowExchange ? 48 : 22;
+  const totBoxH = shouldShowExchange ? 48 : 22;
 
   rect(totX, y - 2, totW, boxH, C.bg, 3);
 
