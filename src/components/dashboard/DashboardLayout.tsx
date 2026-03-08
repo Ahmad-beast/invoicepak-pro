@@ -190,8 +190,11 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
       </main>
 
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
+
       {/* Floating Support Stack */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+      <div className="fixed bottom-20 md:bottom-6 right-6 z-50 flex flex-col gap-3">
         {/* Request Feature Button */}
         <Button
           onClick={() => setFeedbackOpen(true)}
