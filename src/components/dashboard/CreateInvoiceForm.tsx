@@ -271,6 +271,7 @@ export const CreateInvoiceForm = () => {
         items: validItems,
         companyName: isPro && companyName.trim() ? companyName.trim() : undefined,
         companyLogo: isPro && companyLogo ? companyLogo : undefined,
+        showExchangeRate,
       });
 
       if (invoice) {
