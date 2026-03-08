@@ -69,26 +69,6 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Pending Alert */}
-        {!loading && invoices.length > 0 && pendingCount > 0 && (
-          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent overflow-hidden">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">
-                  {pendingCount} pending invoice{pendingCount > 1 ? 's' : ''} awaiting payment
-                </p>
-                <p className="text-xs text-muted-foreground">Mark them as paid when you receive payment</p>
-              </div>
-              <div className="hidden sm:flex items-center gap-1 text-primary">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Empty State */}
         {!loading && invoices.length === 0 && (
           <Card className="border-border/50 border-dashed">
