@@ -309,7 +309,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   // Totals box (right side)
   const totW = cw * 0.42;
   const totX = mr - totW;
-  const totBoxH = shouldShowExchange ? 48 : 22;
+  const totBoxH = shouldShowExchange ? 56 : 22;
 
   rect(totX, y - 2, totW, totBoxH, C.bg, 3);
 
@@ -318,24 +318,20 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   const tv = mr - 6;
 
   if (shouldShowExchange) {
-    // Subtotal in invoice currency
-    txt(`Subtotal (${invoiceCurr})`, tl, tY, { size: 9, color: C.text });
-    txt(money(totalAmount, invoiceCurr), tv, tY, { size: 9, bold: true, color: C.dark, align: 'right' });
+    // Total in invoice's own currency (highlighted, primary)
+    rect(totX + 3, tY - 3, totW - 6, 14, C.primaryLight, 2);
+    txt(`Total (${invoiceCurr})`, tl + 2, tY, { size: 10, bold: true, color: C.primary });
+    txt(money(totalAmount, invoiceCurr), tv - 2, tY, { size: 13, bold: true, color: C.primary, align: 'right' });
 
-    tY += 9;
+    tY += 16;
     // Exchange rate
-    txt('Exchange Rate', tl, tY, { size: 9, color: C.muted });
+    txt('Exchange Rate', tl, tY, { size: 8, color: C.muted });
     txt(rateLabel, tv, tY, { size: 8, color: C.text, align: 'right' });
 
-    tY += 9;
-    // Divider
-    line(tl, tY, tv, C.border, 0.3);
-
-    tY += 6;
-    // Total in converted currency (highlighted)
-    rect(totX + 3, tY - 3, totW - 6, 14, C.primaryLight, 2);
-    txt(`Total (${convertedCurr})`, tl + 2, tY, { size: 10, bold: true, color: C.primary });
-    txt(money(convertedAmt, convertedCurr), tv - 2, tY, { size: 13, bold: true, color: C.primary, align: 'right' });
+    tY += 8;
+    // Converted equivalent (secondary, smaller)
+    txt(`Equivalent (${convertedCurr})`, tl, tY, { size: 8, color: C.muted });
+    txt(money(convertedAmt, convertedCurr), tv, tY, { size: 9, bold: true, color: C.dark, align: 'right' });
   } else {
     // Just show total in invoice currency
     rect(totX + 3, tY - 3, totW - 6, 14, C.primaryLight, 2);
