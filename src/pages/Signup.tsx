@@ -58,8 +58,18 @@ const Signup = () => {
     setIsGoogleLoading(false);
   };
 
+  const isProcessing = isLoading || isGoogleLoading;
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+      {isProcessing && (
+        <div className="absolute inset-0 z-50 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground">Creating your account...</p>
+          </div>
+        </div>
+      )}
       <SEO
         title="Sign Up - Start Invoicing for Free"
         description="Join thousands of Pakistani freelancers. Sign up for InvoicePak Pro to create unlimited professional invoices."

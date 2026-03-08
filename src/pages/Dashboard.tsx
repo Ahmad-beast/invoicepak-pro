@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { WhatsNewDialog } from '@/components/dashboard/WhatsNewDialog';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
@@ -21,12 +22,25 @@ import {
   Zap,
   Crown
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { invoices, loading, updateInvoiceStatus, deleteInvoice } = useInvoices();
   const { isPro, loading: subLoading } = useSubscription();
+
+  // Keyboard shortcut: Ctrl+N for new invoice
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        navigate('/dashboard/create');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
 
   if (!user) return null;
 

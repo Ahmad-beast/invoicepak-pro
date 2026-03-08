@@ -7,6 +7,7 @@ import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, S
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { FeedbackDialog } from './FeedbackDialog';
+import { MobileBottomNav } from './MobileBottomNav';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -184,13 +185,16 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           'mt-16 md:mt-0'
         )}
       >
-        <div className="p-6 md:p-8">
+        <div className="p-6 md:p-8 pb-20 md:pb-8">
           {children}
         </div>
       </main>
 
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
+
       {/* Floating Support Stack */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+      <div className="fixed bottom-20 md:bottom-6 right-6 z-50 flex flex-col gap-3">
         {/* Request Feature Button */}
         <Button
           onClick={() => setFeedbackOpen(true)}

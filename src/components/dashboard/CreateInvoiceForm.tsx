@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { InvoicePreview } from './InvoicePreview';
 import { InvoiceTemplateManager } from './InvoiceTemplateManager';
+import { SuccessAnimation } from './SuccessAnimation';
 import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { InvoiceItem, InvoiceTemplate, CurrencyCode } from '@/types/invoice';
@@ -42,6 +43,7 @@ const DUE_DATE_PRESETS = [
 
 export const CreateInvoiceForm = () => {
   const { user } = useAuth();
+  const [showSuccess, setShowSuccess] = useState(false);
   const [clientName, setClientName] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
@@ -276,8 +278,7 @@ export const CreateInvoiceForm = () => {
 
       if (invoice) {
         await incrementInvoiceCount();
-        toast.success('Invoice created successfully!');
-        navigate('/dashboard');
+        setShowSuccess(true);
       } else {
         toast.error('Failed to create invoice');
       }
@@ -312,7 +313,15 @@ export const CreateInvoiceForm = () => {
     </span>
   );
 
+  const handleSuccessComplete = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
+
   return (
+    <>
+      {showSuccess && (
+        <SuccessAnimation message={editId ? 'Invoice Updated!' : 'Invoice Created!'} onComplete={handleSuccessComplete} />
+      )}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
       <Card className="bg-card border-border">
         <CardHeader className="pb-3">
@@ -930,5 +939,6 @@ export const CreateInvoiceForm = () => {
         />
       </div>
     </div>
+    </>
   );
 };

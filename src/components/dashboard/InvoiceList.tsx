@@ -3,13 +3,15 @@ import { Invoice } from '@/types/invoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign, Link2, Crown, Pencil } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign, Link2, Crown, Pencil, Search, Filter } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
 import { formatCurrency } from '@/lib/currency';
+import { Input } from '@/components/ui/input';
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -19,6 +21,9 @@ interface InvoiceListProps {
 
 export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListProps) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | Invoice['status']>('all');
   const { canUseFeature } = useSubscription();
   const canShareInvoice = canUseFeature('invoiceSharing');
   const canRemoveBranding = canUseFeature('removeBranding');
@@ -55,6 +60,29 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
     toast.success('Share link copied to clipboard!');
   };
 
+  const handleConfirmDelete = () => {
+    if (deleteTarget) {
+      onDelete(deleteTarget);
+      setDeleteTarget(null);
+    }
+  };
+
+  // Filter invoices
+  const filteredInvoices = invoices.filter((invoice) => {
+    const matchesSearch = searchQuery === '' || 
+      invoice.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const statusFilters: { label: string; value: 'all' | Invoice['status'] }[] = [
+    { label: 'All', value: 'all' },
+    { label: 'Draft', value: 'draft' },
+    { label: 'Sent', value: 'sent' },
+    { label: 'Paid', value: 'paid' },
+  ];
+
   if (invoices.length === 0) {
     return (
       <div className="text-center py-12 px-4">
@@ -74,8 +102,60 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
   }
 
   return (
-    <div className="space-y-1">
-      {invoices.map((invoice) => {
+    <div className="space-y-3">
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-2 px-1">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search by client or invoice #..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-8 text-xs bg-background border-border"
+          />
+        </div>
+        <div className="flex gap-1">
+          {statusFilters.map((f) => (
+            <Button
+              key={f.value}
+              variant={statusFilter === f.value ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 text-xs px-3"
+              onClick={() => setStatusFilter(f.value)}
+            >
+              {f.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Empty filter state */}
+      {filteredInvoices.length === 0 && (
+        <div className="text-center py-10 px-4">
+          <div className="w-10 h-10 rounded-xl bg-muted/20 flex items-center justify-center mx-auto mb-3">
+            <Search className="w-5 h-5 text-muted-foreground/40" />
+          </div>
+          <p className="text-sm font-medium text-foreground">
+            {statusFilter !== 'all' 
+              ? `No ${statusFilter} invoices found` 
+              : 'No matching invoices'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {searchQuery ? 'Try a different search term' : 'Try changing the filter'}
+          </p>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="mt-3 text-xs"
+            onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+          >
+            Clear filters
+          </Button>
+        </div>
+      )}
+
+      {/* Invoice Items */}
+      {filteredInvoices.map((invoice) => {
         const status = getStatusConfig(invoice.status);
         const createdDate = new Date(invoice.createdAt);
         
@@ -177,7 +257,7 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => onDelete(invoice.id)}
+                    onClick={() => setDeleteTarget(invoice.id)}
                     className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -189,6 +269,27 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
           </div>
         );
       })}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the invoice and all its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
