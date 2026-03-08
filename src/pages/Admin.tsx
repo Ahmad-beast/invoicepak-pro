@@ -445,137 +445,314 @@ const Admin = () => {
 
           {/* ===== TRAFFIC / REFERRALS TAB ===== */}
           <TabsContent value="traffic" className="space-y-4 mt-0">
+            {/* Header with live indicator */}
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Referral Traffic</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Track visits from <code className="bg-muted/30 px-1.5 py-0.5 rounded text-[10px]">?ref=source</code> links
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={refetchReferrals} disabled={referralsLoading} className="gap-2 text-xs">
-                <RefreshCw className={`w-3.5 h-3.5 ${referralsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-
-            {/* Traffic Summary Cards */}
-            <div className="grid grid-cols-3 gap-3">
-              <Card className="border-border/50 bg-card/50">
-                <CardContent className="p-3.5 text-center">
-                  <Globe className="w-5 h-5 text-primary mx-auto mb-1.5" />
-                  <p className="text-2xl font-bold text-foreground">{referralsLoading ? '—' : totalVisits}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Visits</p>
-                </CardContent>
-              </Card>
-              <Card className="border-border/50 bg-card/50">
-                <CardContent className="p-3.5 text-center">
-                  <Zap className="w-5 h-5 text-primary mx-auto mb-1.5" />
-                  <p className="text-2xl font-bold text-foreground">{referralsLoading ? '—' : todayReferrals}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Today</p>
-                </CardContent>
-              </Card>
-              <Card className="border-border/50 bg-card/50">
-                <CardContent className="p-3.5 text-center">
-                  <ExternalLink className="w-5 h-5 text-primary mx-auto mb-1.5" />
-                  <p className="text-2xl font-bold text-foreground">{referralsLoading ? '—' : sourceStats.length}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Sources</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Referral Sources Table */}
-            {referralsLoading ? (
-              <Card className="border-border/50">
-                <CardContent className="p-4 space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="h-8 w-8 rounded-lg" />
-                      <div className="flex-1 space-y-1">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                      <Skeleton className="h-6 w-12" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ) : sourceStats.length === 0 ? (
-              <Card className="border-border/50 border-dashed">
-                <CardContent className="py-16 flex flex-col items-center justify-center text-muted-foreground">
-                  <div className="w-14 h-14 rounded-full bg-muted/20 flex items-center justify-center mb-4">
-                    <Globe className="w-7 h-7 opacity-30" />
-                  </div>
-                  <p className="font-medium text-sm">No referral traffic yet</p>
-                  <p className="text-xs mt-1 text-center max-w-xs">
-                    Share your link with <code className="bg-muted/30 px-1.5 py-0.5 rounded text-[10px]">?ref=source</code> to start tracking
+              <div className="flex items-center gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    Referral Traffic
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-[10px] font-normal text-emerald-500 uppercase tracking-wider">Real-time</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Auto-updates when new visits arrive via <code className="bg-muted/30 px-1.5 py-0.5 rounded text-[10px]">?ref=source</code>
                   </p>
-                  <div className="mt-4 p-3 rounded-lg bg-muted/10 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground font-mono break-all">
-                      https://invoicepak-pro.vercel.app/?ref=trustmrr
-                    </p>
-                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Stats Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                <CardContent className="p-4 text-center">
+                  <Globe className="w-5 h-5 text-primary mx-auto mb-2" />
+                  <p className="text-3xl font-bold text-primary">{referralsLoading ? '—' : totalVisits}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Total Visits</p>
                 </CardContent>
               </Card>
-            ) : (
-              <Card className="border-border/50 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/20 hover:bg-muted/20 border-border/50">
-                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Source</TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground text-center">Total</TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground text-center hidden sm:table-cell">Today</TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground text-center hidden sm:table-cell">This Week</TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground hidden md:table-cell">Last Visit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sourceStats.map((source, index) => {
-                      const percentage = totalVisits > 0 ? Math.round((source.count / totalVisits) * 100) : 0;
+              <Card className="border-border/50 bg-card/50">
+                <CardContent className="p-4 text-center">
+                  <Zap className="w-5 h-5 text-primary mx-auto mb-2" />
+                  <p className="text-3xl font-bold text-foreground">{referralsLoading ? '—' : todayReferrals}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Today</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/50 bg-card/50">
+                <CardContent className="p-4 text-center">
+                  <TrendingUp className="w-5 h-5 text-primary mx-auto mb-2" />
+                  <p className="text-3xl font-bold text-foreground">{referralsLoading ? '—' : weekReferrals}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">This Week</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/50 bg-card/50">
+                <CardContent className="p-4 text-center">
+                  <ExternalLink className="w-5 h-5 text-primary mx-auto mb-2" />
+                  <p className="text-3xl font-bold text-foreground">{referralsLoading ? '—' : sourceStats.length}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Sources</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 14-Day Sparkline Chart */}
+            {!referralsLoading && dailyCounts.length > 0 && (
+              <Card className="border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-primary" />
+                      Last 14 Days
+                    </h4>
+                    <span className="text-xs text-muted-foreground">
+                      Peak: {Math.max(...dailyCounts.map(d => d.count))} visits
+                    </span>
+                  </div>
+                  <div className="flex items-end gap-1 h-20">
+                    {dailyCounts.map((day) => {
+                      const maxCount = Math.max(...dailyCounts.map(d => d.count), 1);
+                      const height = Math.max((day.count / maxCount) * 100, 4);
+                      const isToday = day.date === today;
                       return (
-                        <TableRow key={source.source} className="border-border/30 hover:bg-primary/5 transition-colors">
-                          <TableCell className="py-3">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                                index === 0 ? 'bg-primary/15 text-primary' : 'bg-muted/30 text-muted-foreground'
-                              }`}>
-                                #{index + 1}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-foreground">{source.source}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <div className="flex-1 h-1.5 rounded-full bg-muted/30 max-w-[80px]">
-                                    <div 
-                                      className="h-full rounded-full bg-primary/60" 
-                                      style={{ width: `${percentage}%` }} 
-                                    />
-                                  </div>
-                                  <span className="text-[10px] text-muted-foreground">{percentage}%</span>
-                                </div>
-                              </div>
+                        <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
+                            <div className="bg-popover border border-border rounded-md px-2 py-1 shadow-lg">
+                              <p className="text-[10px] text-foreground font-semibold whitespace-nowrap">{day.count} visits</p>
+                              <p className="text-[9px] text-muted-foreground">{day.date.slice(5)}</p>
                             </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="text-sm font-bold text-foreground">{source.count}</span>
-                          </TableCell>
-                          <TableCell className="text-center hidden sm:table-cell">
-                            <Badge variant={source.todayCount > 0 ? 'default' : 'secondary'} className={`text-[10px] px-2 ${source.todayCount > 0 ? 'bg-primary/15 text-primary border-primary/30' : 'bg-muted/30'}`}>
-                              {source.todayCount}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center hidden sm:table-cell">
-                            <span className="text-sm text-muted-foreground">{source.weekCount}</span>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {formatDistanceToNow(source.lastVisit, { addSuffix: true })}
-                            </span>
-                          </TableCell>
-                        </TableRow>
+                          </div>
+                          <div
+                            className={`w-full rounded-sm transition-all duration-300 ${
+                              isToday ? 'bg-primary glow-primary' : day.count > 0 ? 'bg-primary/40 hover:bg-primary/60' : 'bg-muted/20'
+                            }`}
+                            style={{ height: `${height}%` }}
+                          />
+                        </div>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <span className="text-[9px] text-muted-foreground">{dailyCounts[0]?.date.slice(5)}</span>
+                    <span className="text-[9px] text-muted-foreground font-medium">Today</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Two Column: Sources + Recent Activity */}
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Sources Ranking */}
+              {referralsLoading ? (
+                <Card className="border-border/50">
+                  <CardContent className="p-4 space-y-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                        <div className="flex-1 space-y-1">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-2 w-full" />
+                        </div>
+                        <Skeleton className="h-6 w-10" />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : sourceStats.length === 0 ? (
+                <Card className="border-border/50 border-dashed">
+                  <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
+                    <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center mb-3">
+                      <Globe className="w-6 h-6 opacity-30" />
+                    </div>
+                    <p className="font-medium text-sm">No sources yet</p>
+                    <p className="text-xs mt-1 text-center">Share a ref link to start tracking</p>
+                    <div className="mt-3 p-2.5 rounded-lg bg-muted/10 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground font-mono break-all">
+                        invoicepak-pro.vercel.app/?ref=trustmrr
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-border/50">
+                  <CardContent className="p-4">
+                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      Top Sources
+                    </h4>
+                    <div className="space-y-3">
+                      {sourceStats.map((source, index) => {
+                        const percentage = totalVisits > 0 ? Math.round((source.count / totalVisits) * 100) : 0;
+                        return (
+                          <div key={source.source} className="group">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2.5">
+                                <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                                  index === 0 ? 'bg-primary/15 text-primary' : index === 1 ? 'bg-primary/10 text-primary/70' : 'bg-muted/30 text-muted-foreground'
+                                }`}>
+                                  {index + 1}
+                                </div>
+                                <span className="text-sm font-medium text-foreground">{source.source}</span>
+                                {source.todayCount > 0 && (
+                                  <Badge variant="default" className="text-[9px] px-1.5 py-0 h-4 bg-primary/15 text-primary border-primary/30">
+                                    +{source.todayCount} today
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-sm font-bold text-foreground">{source.count}</span>
+                            </div>
+                            <div className="flex items-center gap-2 ml-8">
+                              <div className="flex-1 h-1.5 rounded-full bg-muted/20">
+                                <div 
+                                  className="h-full rounded-full bg-primary/50 transition-all duration-500"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-muted-foreground w-8 text-right">{percentage}%</span>
+                            </div>
+                            <div className="flex items-center gap-3 ml-8 mt-1">
+                              <span className="text-[10px] text-muted-foreground">{source.weekCount} this week</span>
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                                <Clock className="w-2.5 h-2.5" />
+                                {formatDistanceToNow(source.lastVisit, { addSuffix: true })}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Recent Activity Live Feed */}
+              <Card className="border-border/50">
+                <CardContent className="p-4">
+                  <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-primary" />
+                    Live Feed
+                    <span className="relative flex h-2 w-2 ml-1">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                  </h4>
+                  {recentVisits.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground">
+                      <p className="text-xs">Waiting for visits...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-0 max-h-[320px] overflow-y-auto pr-1">
+                      {recentVisits.map((visit, i) => (
+                        <div key={visit.id} className={`flex items-start gap-3 py-2.5 ${i > 0 ? 'border-t border-border/20' : ''}`}>
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <Globe className="w-3 h-3 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/20">
+                                {visit.source}
+                              </Badge>
+                              {visit.device && visit.device !== 'unknown' && (
+                                <span className="text-[9px] text-muted-foreground capitalize">
+                                  {visit.device === 'mobile' ? '📱' : visit.device === 'tablet' ? '📱' : '💻'} {visit.device}
+                                </span>
+                              )}
+                              {visit.browser && visit.browser !== 'unknown' && (
+                                <span className="text-[9px] text-muted-foreground">{visit.browser}</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              {formatDistanceToNow(visit.timestamp, { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Device & Browser Breakdown */}
+            {!referralsLoading && totalVisits > 0 && (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {/* Device Breakdown */}
+                <Card className="border-border/50">
+                  <CardContent className="p-4">
+                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                      📱 Devices
+                    </h4>
+                    <div className="space-y-2.5">
+                      {deviceBreakdown.map((d) => (
+                        <div key={d.device} className="flex items-center gap-3">
+                          <span className="text-sm w-16 capitalize text-foreground font-medium">{d.device}</span>
+                          <div className="flex-1 h-2 rounded-full bg-muted/20">
+                            <div className="h-full rounded-full bg-primary/50 transition-all" style={{ width: `${d.percentage}%` }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-16 text-right">{d.count} ({d.percentage}%)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Browser Breakdown */}
+                <Card className="border-border/50">
+                  <CardContent className="p-4">
+                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                      🌐 Browsers
+                    </h4>
+                    <div className="space-y-2.5">
+                      {browserBreakdown.map((b) => (
+                        <div key={b.browser} className="flex items-center gap-3">
+                          <span className="text-sm w-16 text-foreground font-medium truncate">{b.browser}</span>
+                          <div className="flex-1 h-2 rounded-full bg-muted/20">
+                            <div className="h-full rounded-full bg-primary/40 transition-all" style={{ width: `${b.percentage}%` }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-16 text-right">{b.count} ({b.percentage}%)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Hourly Heatmap for Today */}
+            {!referralsLoading && todayReferrals > 0 && (
+              <Card className="border-border/50">
+                <CardContent className="p-4">
+                  <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    ⏰ Today's Hourly Activity
+                  </h4>
+                  <div className="grid grid-cols-12 gap-1">
+                    {hourlyToday.map((h) => {
+                      const maxH = Math.max(...hourlyToday.map(x => x.count), 1);
+                      const intensity = h.count / maxH;
+                      return (
+                        <div key={h.hour} className="flex flex-col items-center gap-1 group relative">
+                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
+                            <div className="bg-popover border border-border rounded px-1.5 py-0.5 shadow-lg">
+                              <p className="text-[9px] text-foreground font-semibold whitespace-nowrap">{h.count} at {h.hour}:00</p>
+                            </div>
+                          </div>
+                          <div
+                            className="w-full h-6 rounded-sm transition-colors cursor-default"
+                            style={{
+                              backgroundColor: h.count > 0
+                                ? `hsl(25 95% 53% / ${0.15 + intensity * 0.65})`
+                                : 'hsl(var(--muted) / 0.1)'
+                            }}
+                          />
+                          {h.hour % 3 === 0 && (
+                            <span className="text-[8px] text-muted-foreground">{h.hour}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
               </Card>
             )}
           </TabsContent>
