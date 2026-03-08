@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useFeedback } from '@/hooks/useFeedback';
+import { useReferrals } from '@/hooks/useReferrals';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BannerManager } from '@/components/admin/BannerManager';
 import { UserDetailSheet } from '@/components/admin/UserDetailSheet';
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -47,11 +48,13 @@ import {
   FileText,
   ChevronRight,
   Megaphone,
-  BarChart3,
   Ban,
   UserCheck,
+  Clock,
+  Globe,
+  ExternalLink,
   ArrowUpRight,
-  Clock
+  Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -74,6 +77,7 @@ const Admin = () => {
   const { isAdmin, isRoleLoading: roleLoading } = useAuth();
   const { users, loading: usersLoading, refetch, grantProAccess, revokeProAccess, toggleBanStatus, deleteUser } = useAdminUsers();
   const { feedbacks, loading: feedbacksLoading, refetch: refetchFeedbacks, markAsRead } = useFeedback();
+  const { sourceStats, totalVisits, loading: referralsLoading, refetch: refetchReferrals } = useReferrals();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
@@ -183,17 +187,18 @@ const Admin = () => {
 
   const proUsersCount = users.filter((u) => u.plan === 'pro').length;
   const freeUsersCount = users.filter((u) => u.plan === 'free').length;
-  const activeSubsCount = users.filter((u) => u.subscriptionStatus === 'active').length;
   const newFeedbackCount = feedbacks.filter((f) => f.status === 'new').length;
   const bannedUsersCount = users.filter((u) => u.isBanned).length;
   const totalInvoices = users.reduce((sum, u) => sum + (u.invoiceCount || 0), 0);
   const conversionRate = users.length > 0 ? Math.round((proUsersCount / users.length) * 100) : 0;
 
-  // Recent users (last 7 days)
   const recentUsers = users.filter(u => {
     const diff = Date.now() - u.createdAt.getTime();
     return diff < 7 * 24 * 60 * 60 * 1000;
   });
+
+  // Today's referral visits
+  const todayReferrals = sourceStats.reduce((sum, s) => sum + s.todayCount, 0);
 
   return (
     <DashboardLayout>
@@ -214,7 +219,7 @@ const Admin = () => {
               <Activity className="w-3 h-3 mr-1.5" />
               Live
             </Badge>
-            <Button variant="outline" size="sm" onClick={() => { refetch(); refetchFeedbacks(); }} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => { refetch(); refetchFeedbacks(); refetchReferrals(); }} className="gap-2">
               <RefreshCw className={`w-3.5 h-3.5 ${usersLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
@@ -223,52 +228,12 @@ const Admin = () => {
 
         {/* Quick Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatsCard
-            label="Total Users"
-            value={users.length}
-            icon={Users}
-            loading={usersLoading}
-            accent={false}
-          />
-          <StatsCard
-            label="Pro Users"
-            value={proUsersCount}
-            icon={Crown}
-            loading={usersLoading}
-            accent={true}
-            subtitle={`${conversionRate}% rate`}
-          />
-          <StatsCard
-            label="Free Users"
-            value={freeUsersCount}
-            icon={UserCheck}
-            loading={usersLoading}
-            accent={false}
-          />
-          <StatsCard
-            label="Banned"
-            value={bannedUsersCount}
-            icon={Ban}
-            loading={usersLoading}
-            accent={false}
-            danger={bannedUsersCount > 0}
-          />
-          <StatsCard
-            label="Invoices"
-            value={totalInvoices}
-            icon={FileText}
-            loading={usersLoading}
-            accent={false}
-          />
-          <StatsCard
-            label="Feedback"
-            value={newFeedbackCount}
-            icon={MessageSquare}
-            loading={feedbacksLoading}
-            accent={false}
-            warning={newFeedbackCount > 0}
-            subtitle={`${feedbacks.length} total`}
-          />
+          <StatsCard label="Total Users" value={users.length} icon={Users} loading={usersLoading} accent={false} />
+          <StatsCard label="Pro Users" value={proUsersCount} icon={Crown} loading={usersLoading} accent={true} subtitle={`${conversionRate}% rate`} />
+          <StatsCard label="Free Users" value={freeUsersCount} icon={UserCheck} loading={usersLoading} accent={false} />
+          <StatsCard label="Banned" value={bannedUsersCount} icon={Ban} loading={usersLoading} accent={false} danger={bannedUsersCount > 0} />
+          <StatsCard label="Invoices" value={totalInvoices} icon={FileText} loading={usersLoading} accent={false} />
+          <StatsCard label="Traffic" value={totalVisits} icon={Globe} loading={referralsLoading} accent={false} warning={todayReferrals > 0} subtitle={`${todayReferrals} today`} />
         </div>
 
         {/* Conversion Progress */}
@@ -293,24 +258,33 @@ const Admin = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="h-11 p-1 bg-muted/30 border border-border/50 w-full sm:w-auto grid grid-cols-3 sm:flex">
-            <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm px-3 sm:px-5">
+          <TabsList className="h-11 p-1 bg-muted/30 border border-border/50 w-full sm:w-auto grid grid-cols-4 sm:flex">
+            <TabsTrigger value="users" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm px-2 sm:px-5">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Users</span>
-              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-[10px] bg-muted">
+              <Badge variant="secondary" className="ml-0.5 h-5 min-w-5 px-1.5 text-[10px] bg-muted hidden sm:inline-flex">
                 {users.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="feedback" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm px-3 sm:px-5">
+            <TabsTrigger value="traffic" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm px-2 sm:px-5">
+              <Globe className="w-4 h-4" />
+              <span className="hidden sm:inline">Traffic</span>
+              {totalVisits > 0 && (
+                <Badge variant="secondary" className="ml-0.5 h-5 min-w-5 px-1.5 text-[10px] bg-muted hidden sm:inline-flex">
+                  {totalVisits}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm px-2 sm:px-5">
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Feedback</span>
               {newFeedbackCount > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-[10px]">
+                <Badge variant="destructive" className="ml-0.5 h-5 min-w-5 px-1.5 text-[10px]">
                   {newFeedbackCount}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="banner" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm px-3 sm:px-5">
+            <TabsTrigger value="banner" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs sm:text-sm px-2 sm:px-5">
               <Megaphone className="w-4 h-4" />
               <span className="hidden sm:inline">Banner</span>
             </TabsTrigger>
@@ -318,7 +292,6 @@ const Admin = () => {
 
           {/* ===== USERS TAB ===== */}
           <TabsContent value="users" className="space-y-4 mt-0">
-            {/* Search & Filter Bar */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -346,7 +319,6 @@ const Admin = () => {
               </Select>
             </div>
 
-            {/* Users Table */}
             <Card className="border-border/50 overflow-hidden">
               <Table>
                 <TableHeader>
@@ -466,11 +438,146 @@ const Admin = () => {
                   Showing {filteredUsers.length} of {users.length} users
                 </p>
                 {filteredUsers.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Click any row for details
-                  </p>
+                  <p className="text-xs text-muted-foreground">Click any row for details</p>
                 )}
               </div>
+            )}
+          </TabsContent>
+
+          {/* ===== TRAFFIC / REFERRALS TAB ===== */}
+          <TabsContent value="traffic" className="space-y-4 mt-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Referral Traffic</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Track visits from <code className="bg-muted/30 px-1.5 py-0.5 rounded text-[10px]">?ref=source</code> links
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={refetchReferrals} disabled={referralsLoading} className="gap-2 text-xs">
+                <RefreshCw className={`w-3.5 h-3.5 ${referralsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+
+            {/* Traffic Summary Cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="border-border/50 bg-card/50">
+                <CardContent className="p-3.5 text-center">
+                  <Globe className="w-5 h-5 text-primary mx-auto mb-1.5" />
+                  <p className="text-2xl font-bold text-foreground">{referralsLoading ? '—' : totalVisits}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Visits</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/50 bg-card/50">
+                <CardContent className="p-3.5 text-center">
+                  <Zap className="w-5 h-5 text-primary mx-auto mb-1.5" />
+                  <p className="text-2xl font-bold text-foreground">{referralsLoading ? '—' : todayReferrals}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Today</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/50 bg-card/50">
+                <CardContent className="p-3.5 text-center">
+                  <ExternalLink className="w-5 h-5 text-primary mx-auto mb-1.5" />
+                  <p className="text-2xl font-bold text-foreground">{referralsLoading ? '—' : sourceStats.length}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Sources</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Referral Sources Table */}
+            {referralsLoading ? (
+              <Card className="border-border/50">
+                <CardContent className="p-4 space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                      <div className="flex-1 space-y-1">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                      <Skeleton className="h-6 w-12" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : sourceStats.length === 0 ? (
+              <Card className="border-border/50 border-dashed">
+                <CardContent className="py-16 flex flex-col items-center justify-center text-muted-foreground">
+                  <div className="w-14 h-14 rounded-full bg-muted/20 flex items-center justify-center mb-4">
+                    <Globe className="w-7 h-7 opacity-30" />
+                  </div>
+                  <p className="font-medium text-sm">No referral traffic yet</p>
+                  <p className="text-xs mt-1 text-center max-w-xs">
+                    Share your link with <code className="bg-muted/30 px-1.5 py-0.5 rounded text-[10px]">?ref=source</code> to start tracking
+                  </p>
+                  <div className="mt-4 p-3 rounded-lg bg-muted/10 border border-border/50">
+                    <p className="text-[10px] text-muted-foreground font-mono break-all">
+                      https://invoicepak-pro.vercel.app/?ref=trustmrr
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border/50 overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/20 hover:bg-muted/20 border-border/50">
+                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Source</TableHead>
+                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground text-center">Total</TableHead>
+                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground text-center hidden sm:table-cell">Today</TableHead>
+                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground text-center hidden sm:table-cell">This Week</TableHead>
+                      <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground hidden md:table-cell">Last Visit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sourceStats.map((source, index) => {
+                      const percentage = totalVisits > 0 ? Math.round((source.count / totalVisits) * 100) : 0;
+                      return (
+                        <TableRow key={source.source} className="border-border/30 hover:bg-primary/5 transition-colors">
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                                index === 0 ? 'bg-primary/15 text-primary' : 'bg-muted/30 text-muted-foreground'
+                              }`}>
+                                #{index + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-foreground">{source.source}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <div className="flex-1 h-1.5 rounded-full bg-muted/30 max-w-[80px]">
+                                    <div 
+                                      className="h-full rounded-full bg-primary/60" 
+                                      style={{ width: `${percentage}%` }} 
+                                    />
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground">{percentage}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="text-sm font-bold text-foreground">{source.count}</span>
+                          </TableCell>
+                          <TableCell className="text-center hidden sm:table-cell">
+                            <Badge variant={source.todayCount > 0 ? 'default' : 'secondary'} className={`text-[10px] px-2 ${source.todayCount > 0 ? 'bg-primary/15 text-primary border-primary/30' : 'bg-muted/30'}`}>
+                              {source.todayCount}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center hidden sm:table-cell">
+                            <span className="text-sm text-muted-foreground">{source.weekCount}</span>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDistanceToNow(source.lastVisit, { addSuffix: true })}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Card>
             )}
           </TabsContent>
 
@@ -581,7 +688,6 @@ const Admin = () => {
         </Tabs>
       </div>
 
-      {/* User Detail Sheet */}
       <UserDetailSheet
         user={selectedUser}
         open={sheetOpen}
