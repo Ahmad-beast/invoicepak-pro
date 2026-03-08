@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { Invoice } from '@/types/invoice';
 import { format } from 'date-fns';
 import { formatCurrencyForPDF } from '@/lib/currency';
+import { DEFAULT_RATES_TO_PKR } from '@/lib/currency';
 
 // --- CONFIGURATION ---
 const PAGE = {
