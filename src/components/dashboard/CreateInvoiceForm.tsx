@@ -42,6 +42,7 @@ const DUE_DATE_PRESETS = [
 
 export const CreateInvoiceForm = () => {
   const { user } = useAuth();
+  const [showSuccess, setShowSuccess] = useState(false);
   const [clientName, setClientName] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
