@@ -313,7 +313,15 @@ export const CreateInvoiceForm = () => {
     </span>
   );
 
+  const handleSuccessComplete = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
+
   return (
+    <>
+      {showSuccess && (
+        <SuccessAnimation message={editId ? 'Invoice Updated!' : 'Invoice Created!'} onComplete={handleSuccessComplete} />
+      )}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
       <Card className="bg-card border-border">
         <CardHeader className="pb-3">
