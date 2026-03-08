@@ -25,6 +25,7 @@ import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { invoices, loading, updateInvoiceStatus, deleteInvoice } = useInvoices();
   const { isPro, loading: subLoading } = useSubscription();
 
