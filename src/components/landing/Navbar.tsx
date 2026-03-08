@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { FileText, Menu, X } from 'lucide-react';
+import { FileText, Menu, X, Flame } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -24,24 +24,24 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+    <nav className="sticky top-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/50">
       <div className="container mx-auto px-4 py-3.5 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <FileText className="w-4.5 h-4.5 text-primary-foreground" />
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center group-hover:glow-primary transition-all">
+            <Flame className="w-4.5 h-4.5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold text-foreground">InvoicePK</span>
         </Link>
         
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             link.isAnchor ? (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={(e) => scrollToSection(e, link.href)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+                className="text-sm text-muted-foreground hover:text-foreground px-4 py-2 rounded-lg hover:bg-accent transition-all font-medium"
               >
                 {link.label}
               </a>
@@ -49,7 +49,7 @@ export const Navbar = () => {
               <Link
                 key={link.href}
                 to={link.href}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+                className="text-sm text-muted-foreground hover:text-foreground px-4 py-2 rounded-lg hover:bg-accent transition-all font-medium"
               >
                 {link.label}
               </Link>
@@ -59,16 +59,16 @@ export const Navbar = () => {
         
         <div className="hidden md:flex items-center gap-3">
           <Link to="/login">
-            <Button variant="ghost" size="sm">Sign In</Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">Sign In</Button>
           </Link>
           <Link to="/signup">
-            <Button size="sm">Get Started</Button>
+            <Button size="sm" className="glow-primary font-semibold">Get Started</Button>
           </Link>
         </div>
 
         {/* Mobile Menu Button */}
         <button
-          className="md:hidden p-2 text-foreground rounded-lg hover:bg-muted transition-colors"
+          className="md:hidden p-2 text-foreground rounded-lg hover:bg-accent transition-colors"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -77,7 +77,7 @@ export const Navbar = () => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-background border-b border-border px-4 py-4 animate-in slide-in-from-top-2">
+        <div className="md:hidden bg-card/95 backdrop-blur-xl border-b border-border px-4 py-4 animate-in slide-in-from-top-2">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               link.isAnchor ? (
@@ -85,7 +85,7 @@ export const Navbar = () => {
                   key={link.href}
                   href={link.href}
                   onClick={(e) => scrollToSection(e, link.href)}
-                  className="text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors py-2.5 px-3 rounded-lg font-medium"
+                  className="text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors py-3 px-4 rounded-lg font-medium"
                 >
                   {link.label}
                 </a>
@@ -94,7 +94,7 @@ export const Navbar = () => {
                   key={link.href}
                   to={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors py-2.5 px-3 rounded-lg font-medium"
+                  className="text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors py-3 px-4 rounded-lg font-medium"
                 >
                   {link.label}
                 </Link>
