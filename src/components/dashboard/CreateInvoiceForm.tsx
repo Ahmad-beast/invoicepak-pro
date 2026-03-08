@@ -868,14 +868,14 @@ export const CreateInvoiceForm = () => {
                 type="submit" 
                 size="lg" 
                 className="w-full shadow-lg shadow-primary/20 h-12 text-base font-medium"
-                disabled={isSubmitting || !canCreate}
+                disabled={isSubmitting || (!isEditing && !canCreate)}
               >
                 {isSubmitting ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating Invoice...</>
-                ) : !canCreate ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isEditing ? 'Updating...' : 'Creating Invoice...'}</>
+                ) : !isEditing && !canCreate ? (
                   <><Lock className="w-4 h-4 mr-2" />Limit Reached</>
                 ) : (
-                  'Create Invoice'
+                  isEditing ? 'Update Invoice' : 'Create Invoice'
                 )}
               </Button>
             </div>
