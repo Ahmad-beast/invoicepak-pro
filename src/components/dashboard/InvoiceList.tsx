@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Trash2, CheckCircle, Send, FileText, Download, Loader2, Calendar, DollarSign, Link2, Crown } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { generateInvoicePDF } from '@/utils/generateInvoicePDF';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -19,29 +19,20 @@ interface InvoiceListProps {
 
 export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListProps) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const { canUseFeature, subscription } = useSubscription();
+  const { canUseFeature } = useSubscription();
   const canShareInvoice = canUseFeature('invoiceSharing');
   const canRemoveBranding = canUseFeature('removeBranding');
 
-  const getStatusStyle = (status: Invoice['status']) => {
+  const getStatusConfig = (status: Invoice['status']) => {
     switch (status) {
       case 'paid': 
-        return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20';
+        return { label: 'Paid', dotClass: 'bg-chart-2', badgeClass: 'bg-chart-2/10 text-chart-2 border-chart-2/20' };
       case 'sent': 
-        return 'bg-sky-500/15 text-sky-400 border-sky-500/30 hover:bg-sky-500/20';
+        return { label: 'Sent', dotClass: 'bg-chart-5', badgeClass: 'bg-chart-5/10 text-chart-5 border-chart-5/20' };
       default: 
-        return 'bg-muted/30 text-muted-foreground border-border hover:bg-muted/40';
+        return { label: 'Draft', dotClass: 'bg-muted-foreground/40', badgeClass: 'bg-muted/20 text-muted-foreground border-border' };
     }
   };
-
-  const getStatusLabel = (status: Invoice['status']) => {
-    switch (status) {
-      case 'paid': return 'Paid';
-      case 'sent': return 'Sent';
-      default: return 'Draft';
-    }
-  };
-
 
   const handleDownloadPDF = async (invoice: Invoice, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -66,15 +57,15 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
 
   if (invoices.length === 0) {
     return (
-      <div className="text-center py-16">
-        <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-4">
-          <FileText className="w-8 h-8 text-muted-foreground/50" />
+      <div className="text-center py-12 px-4">
+        <div className="w-12 h-12 rounded-xl bg-muted/20 flex items-center justify-center mx-auto mb-3">
+          <FileText className="w-6 h-6 text-muted-foreground/40" />
         </div>
-        <h3 className="text-lg font-medium text-foreground mb-1">No invoices yet</h3>
-        <p className="text-muted-foreground text-sm mb-6">Create your first invoice to get started</p>
+        <p className="text-sm font-medium text-foreground">No invoices yet</p>
+        <p className="text-xs text-muted-foreground mt-1 mb-4">Create your first invoice to get started</p>
         <Link to="/dashboard/create">
-          <Button className="gap-2">
-            <FileText className="w-4 h-4" />
+          <Button size="sm" className="gap-1.5 text-xs">
+            <FileText className="w-3.5 h-3.5" />
             Create Invoice
           </Button>
         </Link>
@@ -83,111 +74,115 @@ export const InvoiceList = ({ invoices, onUpdateStatus, onDelete }: InvoiceListP
   }
 
   return (
-    <div className="space-y-3">
-      {invoices.map((invoice) => (
-        <div 
-          key={invoice.id} 
-          className="group flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-background border border-border hover:border-primary/40 hover:bg-accent/5 transition-all duration-200"
-        >
-          {/* Invoice Icon & Info */}
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/15 transition-colors">
-              <FileText className="w-5 h-5 text-primary" />
+    <div className="space-y-1">
+      {invoices.map((invoice) => {
+        const status = getStatusConfig(invoice.status);
+        const createdDate = new Date(invoice.createdAt);
+        
+        return (
+          <div 
+            key={invoice.id} 
+            className="group flex items-center gap-3 p-3 rounded-lg hover:bg-primary/5 transition-all duration-150 cursor-default"
+          >
+            {/* Status Dot + Icon */}
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-muted/20 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                <FileText className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <div className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ${status.dotClass} ring-2 ring-card`} />
             </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                {invoice.clientName}
-              </h4>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                <span className="font-mono">{invoice.invoiceNumber}</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {format(new Date(invoice.createdAt), 'MMM d, yyyy')}
-                </span>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                  {invoice.clientName}
+                </h4>
+                <Badge variant="outline" className={`${status.badgeClass} text-[9px] px-1.5 py-0 h-4 shrink-0`}>
+                  {status.label}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] text-muted-foreground font-mono">{invoice.invoiceNumber}</span>
+                <span className="text-[10px] text-muted-foreground">•</span>
+                <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(createdDate, { addSuffix: true })}</span>
               </div>
             </div>
-          </div>
 
-          {/* Amount */}
-          <div className="flex items-center gap-2 sm:min-w-[150px]">
-            <DollarSign className="w-4 h-4 text-muted-foreground/60" />
-            <div className="text-right">
-              <p className="font-semibold text-foreground">{formatCurrency(invoice.amount, invoice.currency)}</p>
+            {/* Amount */}
+            <div className="text-right shrink-0 hidden sm:block">
+              <p className="text-sm font-semibold text-foreground">{formatCurrency(invoice.amount, invoice.currency)}</p>
               {invoice.currency === 'USD' && (
-                <p className="text-xs text-primary font-medium">{formatCurrency(invoice.convertedAmount, 'PKR')}</p>
+                <p className="text-[10px] text-primary font-medium">{formatCurrency(invoice.convertedAmount, 'PKR')}</p>
               )}
             </div>
-          </div>
 
-          {/* Status Badge */}
-          <Badge 
-            variant="outline" 
-            className={`${getStatusStyle(invoice.status)} border px-3 py-1 font-medium text-xs transition-colors`}
-          >
-            {getStatusLabel(invoice.status)}
-          </Badge>
+            {/* Mobile Amount */}
+            <div className="text-right shrink-0 sm:hidden">
+              <p className="text-xs font-semibold text-foreground">{formatCurrency(invoice.amount, invoice.currency)}</p>
+            </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => handleDownloadPDF(invoice, e)}
-              disabled={downloadingId === invoice.id}
-              className="gap-2 h-9"
-            >
-              {downloadingId === invoice.id ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              <span className="hidden sm:inline">PDF</span>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-accent">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem 
-                  onClick={() => handleDownloadPDF(invoice, { stopPropagation: () => {} } as React.MouseEvent)}
-                  className="gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Download PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleCopyShareLink(invoice)} className="gap-2">
-                  <Link2 className="w-4 h-4" />
-                  Copy Share Link
-                  {!canShareInvoice && <Crown className="w-3 h-3 ml-auto text-primary" />}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {invoice.status !== 'sent' && (
-                  <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'sent')} className="gap-2">
-                    <Send className="w-4 h-4" />
-                    Mark as Sent
-                  </DropdownMenuItem>
+            {/* Actions */}
+            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => handleDownloadPDF(invoice, e)}
+                disabled={downloadingId === invoice.id}
+              >
+                {downloadingId === invoice.id ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5" />
                 )}
-                {invoice.status !== 'paid' && (
-                  <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'paid')} className="gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    Mark as Paid
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem 
+                    onClick={(e) => handleDownloadPDF(invoice, e as unknown as React.MouseEvent)}
+                    className="gap-2 text-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download PDF
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onDelete(invoice.id)}
-                  className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete Invoice
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem onClick={() => handleCopyShareLink(invoice)} className="gap-2 text-xs">
+                    <Link2 className="w-3.5 h-3.5" />
+                    Copy Share Link
+                    {!canShareInvoice && <Crown className="w-3 h-3 ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {invoice.status !== 'sent' && (
+                    <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'sent')} className="gap-2 text-xs">
+                      <Send className="w-3.5 h-3.5" />
+                      Mark as Sent
+                    </DropdownMenuItem>
+                  )}
+                  {invoice.status !== 'paid' && (
+                    <DropdownMenuItem onClick={() => onUpdateStatus(invoice.id, 'paid')} className="gap-2 text-xs">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Mark as Paid
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => onDelete(invoice.id)}
+                    className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
