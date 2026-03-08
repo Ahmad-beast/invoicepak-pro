@@ -30,6 +30,18 @@ const Dashboard = () => {
   const { invoices, loading, updateInvoiceStatus, deleteInvoice } = useInvoices();
   const { isPro, loading: subLoading } = useSubscription();
 
+  // Keyboard shortcut: Ctrl+N for new invoice
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        navigate('/dashboard/create');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   if (!user) return null;
 
   const displayName = user.displayName || user.email?.split('@')[0] || 'User';
