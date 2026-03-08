@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Invoice } from '@/types/invoice';
-import { FileText, DollarSign, CheckCircle, Clock, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { FileText, DollarSign, CheckCircle, Clock } from 'lucide-react';
 
 interface DashboardStatsProps {
   invoices: Invoice[];
@@ -13,17 +13,15 @@ export const DashboardStats = ({ invoices }: DashboardStatsProps) => {
   
   const totalRevenue = invoices
     .filter(i => i.status === 'paid')
-    .reduce((sum, inv) => {
-      return sum + (inv.currency === 'PKR' ? inv.amount : inv.convertedAmount);
-    }, 0);
+    .reduce((sum, inv) => sum + (inv.currency === 'PKR' ? inv.amount : inv.convertedAmount), 0);
 
   const pendingRevenue = invoices
     .filter(i => i.status !== 'paid')
-    .reduce((sum, inv) => {
-      return sum + (inv.currency === 'PKR' ? inv.amount : inv.convertedAmount);
-    }, 0);
+    .reduce((sum, inv) => sum + (inv.currency === 'PKR' ? inv.amount : inv.convertedAmount), 0);
 
   const formatPKR = (amount: number) => {
+    if (amount >= 1000000) return `PKR ${(amount / 1000000).toFixed(1)}M`;
+    if (amount >= 100000) return `PKR ${(amount / 1000).toFixed(0)}K`;
     return new Intl.NumberFormat('en-PK', {
       style: 'currency',
       currency: 'PKR',
@@ -32,83 +30,69 @@ export const DashboardStats = ({ invoices }: DashboardStatsProps) => {
     }).format(amount);
   };
 
+  const paymentRate = totalInvoices > 0 ? Math.round((paidInvoices / totalInvoices) * 100) : 0;
+
   const stats = [
     {
       label: 'Total Invoices',
-      value: totalInvoices,
-      subValue: `${paidInvoices} paid`,
-      icon: <FileText className="w-5 h-5" />,
-      color: 'text-chart-1',
-      bg: 'bg-chart-1/10',
-      borderColor: 'border-chart-1/20',
-      trend: totalInvoices > 0 ? 'up' : null,
-      trendValue: '+12%',
+      value: totalInvoices.toString(),
+      sub: `${paidInvoices} paid, ${pendingInvoices} pending`,
+      icon: FileText,
+      iconBg: 'bg-primary/10',
+      iconColor: 'text-primary',
+      border: 'border-primary/20',
     },
     {
-      label: 'Revenue (PKR)',
+      label: 'Revenue Earned',
       value: formatPKR(totalRevenue),
-      subValue: 'Total earned',
-      icon: <DollarSign className="w-5 h-5" />,
-      color: 'text-primary',
-      bg: 'bg-primary/10',
-      borderColor: 'border-primary/20',
-      trend: totalRevenue > 0 ? 'up' : null,
-      trendValue: '+8%',
+      sub: 'From paid invoices',
+      icon: DollarSign,
+      iconBg: 'bg-primary/10',
+      iconColor: 'text-primary',
+      border: 'border-primary/20',
     },
     {
-      label: 'Paid Invoices',
-      value: paidInvoices,
-      subValue: `${totalInvoices > 0 ? Math.round((paidInvoices / totalInvoices) * 100) : 0}% rate`,
-      icon: <CheckCircle className="w-5 h-5" />,
-      color: 'text-chart-2',
-      bg: 'bg-chart-2/10',
-      borderColor: 'border-chart-2/20',
-      trend: paidInvoices > 0 ? 'up' : null,
-      trendValue: '+5%',
+      label: 'Payment Rate',
+      value: `${paymentRate}%`,
+      sub: `${paidInvoices} of ${totalInvoices} invoices`,
+      icon: CheckCircle,
+      iconBg: 'bg-chart-2/10',
+      iconColor: 'text-chart-2',
+      border: 'border-chart-2/20',
+      progress: paymentRate,
     },
     {
-      label: 'Pending',
-      value: pendingInvoices,
-      subValue: formatPKR(pendingRevenue),
-      icon: <Clock className="w-5 h-5" />,
-      color: 'text-chart-4',
-      bg: 'bg-chart-4/10',
-      borderColor: 'border-chart-4/20',
-      trend: pendingInvoices > 0 ? 'neutral' : null,
-      trendValue: 'Awaiting',
+      label: 'Pending Amount',
+      value: formatPKR(pendingRevenue),
+      sub: `${pendingInvoices} invoice${pendingInvoices !== 1 ? 's' : ''} unpaid`,
+      icon: Clock,
+      iconBg: 'bg-chart-4/10',
+      iconColor: 'text-chart-4',
+      border: 'border-chart-4/20',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {stats.map((stat) => (
         <Card 
           key={stat.label} 
-          className={`bg-card border ${stat.borderColor} hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group`}
+          className={`${stat.border} bg-card/50 hover:bg-card/80 transition-all duration-200 group`}
         >
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
-                {stat.icon}
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className={`w-9 h-9 rounded-lg ${stat.iconBg} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                <stat.icon className={`w-4.5 h-4.5 ${stat.iconColor}`} />
               </div>
-              {stat.trend && (
-                <div className={`flex items-center gap-1 text-xs font-medium ${
-                  stat.trend === 'up' ? 'text-chart-2' : 
-                  stat.trend === 'down' ? 'text-destructive' : 
-                  'text-muted-foreground'
-                }`}>
-                  {stat.trend === 'up' && <ArrowUpRight className="w-3 h-3" />}
-                  {stat.trend === 'down' && <ArrowDownRight className="w-3 h-3" />}
-                  {stat.trend === 'neutral' && <TrendingUp className="w-3 h-3" />}
-                  <span>{stat.trendValue}</span>
-                </div>
-              )}
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium leading-tight">{stat.label}</p>
             </div>
-            <p className="text-2xl sm:text-3xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors">
-              {stat.value}
-            </p>
-            <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">{stat.subValue}</p>
+            <p className="text-xl sm:text-2xl font-bold text-foreground leading-tight">{stat.value}</p>
+            {stat.progress !== undefined && (
+              <div className="mt-2 h-1.5 rounded-full bg-muted/20">
+                <div className="h-full rounded-full bg-chart-2/60 transition-all duration-500" style={{ width: `${stat.progress}%` }} />
+              </div>
+            )}
+            <p className="text-[10px] text-muted-foreground mt-1.5">{stat.sub}</p>
           </CardContent>
         </Card>
       ))}

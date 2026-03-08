@@ -6,100 +6,165 @@ import { InvoiceList } from '@/components/dashboard/InvoiceList';
 import { InvoiceListSkeleton } from '@/components/dashboard/InvoiceListSkeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, TrendingUp, Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { 
+  Plus, 
+  FileText, 
+  TrendingUp, 
+  Clock, 
+  Sparkles, 
+  ArrowRight,
+  Zap,
+  Crown
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { invoices, loading, updateInvoiceStatus, deleteInvoice } = useInvoices();
+  const { isPro, loading: subLoading } = useSubscription();
 
-  // Should never happen because /dashboard is wrapped in <AuthGate />
   if (!user) return null;
 
   const displayName = user.displayName || user.email?.split('@')[0] || 'User';
   const pendingCount = invoices.filter((i) => i.status !== 'paid').length;
+  const paidCount = invoices.filter((i) => i.status === 'paid').length;
+
+  // Time-based greeting
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
     <DashboardLayout>
-      {/* Welcome Section */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
-              Welcome back, <span className="text-primary">{displayName}</span>! 👋
-            </h1>
-            <p className="text-muted-foreground">Here's an overview of your invoicing activity</p>
+      <div className="space-y-6">
+        {/* Hero Welcome */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                {greeting}, <span className="text-primary">{displayName}</span>
+              </h1>
+              {!subLoading && isPro && (
+                <Badge className="bg-primary/15 text-primary border-primary/30 text-[10px] px-2 py-0.5">
+                  <Crown className="w-2.5 h-2.5 mr-1" />
+                  PRO
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {loading ? 'Loading your dashboard...' : 
+                invoices.length === 0 ? 'Create your first invoice to get started' :
+                `${invoices.length} invoice${invoices.length !== 1 ? 's' : ''} • ${paidCount} paid • ${pendingCount} pending`
+              }
+            </p>
           </div>
           <Link to="/dashboard/create">
-            <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+            <Button className="gap-2 glow-primary font-semibold h-10">
               <Plus className="w-4 h-4" />
               New Invoice
             </Button>
           </Link>
         </div>
 
-        {/* Loading State */}
-        {loading ? null : invoices.length === 0 ? (
-          /* Empty State */
-          <div className="bg-card border border-border rounded-2xl p-10 text-center mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-              <FileText className="w-10 h-10 text-primary" />
-            </div>
-            <h3 className="text-2xl font-semibold text-foreground mb-2">No invoices yet</h3>
-            <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Create your first invoice to get started with professional invoicing and automatic USD to PKR conversion.
-            </p>
-            <Link to="/dashboard/create">
-              <Button size="lg" className="gap-2 px-8">
-                <Plus className="w-5 h-5" />
-                Create Invoice
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          pendingCount > 0 && (
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+        {/* Pending Alert */}
+        {!loading && invoices.length > 0 && pendingCount > 0 && (
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent overflow-hidden">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <Clock className="w-5 h-5 text-primary" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">
-                  You have {pendingCount} pending invoice{pendingCount > 1 ? 's' : ''}
+                  {pendingCount} pending invoice{pendingCount > 1 ? 's' : ''} awaiting payment
                 </p>
-                <p className="text-xs text-muted-foreground">Send reminders to get paid faster</p>
+                <p className="text-xs text-muted-foreground">Mark them as paid when you receive payment</p>
               </div>
-              <TrendingUp className="w-5 h-5 text-primary" />
-            </div>
-          )
+              <div className="hidden sm:flex items-center gap-1 text-primary">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+            </CardContent>
+          </Card>
         )}
-      </div>
 
-      {/* Monthly Summary */}
-      {!loading && invoices.length > 0 && <MonthlySummary invoices={invoices} />}
+        {/* Empty State */}
+        {!loading && invoices.length === 0 && (
+          <Card className="border-border/50 border-dashed">
+            <CardContent className="py-16 flex flex-col items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                <FileText className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">Create your first invoice</h3>
+              <p className="text-sm text-muted-foreground max-w-sm text-center mb-6">
+                Professional invoices with automatic USD to PKR conversion. Takes less than 2 minutes.
+              </p>
+              <Link to="/dashboard/create">
+                <Button size="lg" className="gap-2 glow-primary font-semibold">
+                  <Sparkles className="w-4 h-4" />
+                  Create Invoice
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Stats Cards */}
-      {loading ? <DashboardStatsSkeleton /> : <DashboardStats invoices={invoices} />}
+        {/* Stats Cards */}
+        {loading ? <DashboardStatsSkeleton /> : invoices.length > 0 && <DashboardStats invoices={invoices} />}
 
-      {/* Invoice List Section */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground">Recent Invoices</h2>
-            <p className="text-sm text-muted-foreground">
-              {loading ? 'Loading...' : `${invoices.length} total invoice${invoices.length !== 1 ? 's' : ''}`}
-            </p>
-          </div>
-          {invoices.length > 5 && (
-            <Button variant="outline" size="sm">
-              View All
-            </Button>
-          )}
-        </div>
-        {loading ? (
-          <InvoiceListSkeleton />
-        ) : (
-          <InvoiceList invoices={invoices} onUpdateStatus={updateInvoiceStatus} onDelete={deleteInvoice} />
+        {/* Monthly Summary */}
+        {!loading && invoices.length > 0 && <MonthlySummary invoices={invoices} />}
+
+        {/* Invoice List */}
+        {(loading || invoices.length > 0) && (
+          <Card className="border-border/50 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Recent Invoices</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {loading ? 'Loading...' : `${invoices.length} total`}
+                  </p>
+                </div>
+                <Link to="/dashboard/create">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8">
+                    <Plus className="w-3.5 h-3.5" />
+                    New
+                  </Button>
+                </Link>
+              </div>
+              <div className="p-3">
+                {loading ? (
+                  <InvoiceListSkeleton />
+                ) : (
+                  <InvoiceList invoices={invoices} onUpdateStatus={updateInvoiceStatus} onDelete={deleteInvoice} />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quick Upgrade CTA (for free users) */}
+        {!subLoading && !isPro && !loading && invoices.length > 0 && (
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <p className="text-sm font-semibold text-foreground">Upgrade to Pro</p>
+                <p className="text-xs text-muted-foreground">Remove branding, share invoices, unlimited templates & more</p>
+              </div>
+              <Link to="/dashboard/subscription">
+                <Button size="sm" className="gap-1.5 font-semibold glow-primary">
+                  <Crown className="w-3.5 h-3.5" />
+                  Upgrade
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         )}
       </div>
     </DashboardLayout>

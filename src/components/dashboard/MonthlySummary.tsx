@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { Invoice } from '@/types/invoice';
-import { CalendarDays, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { CalendarDays, DollarSign, Clock, CheckCircle, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface MonthlySummaryProps {
   invoices: Invoice[];
@@ -10,33 +13,32 @@ export const MonthlySummary = ({ invoices }: MonthlySummaryProps) => {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  // Filter invoices for current month
-  const thisMonthInvoices = invoices.filter((invoice) => {
-    const invoiceDate = new Date(invoice.createdAt);
-    return (
-      invoiceDate.getMonth() === currentMonth &&
-      invoiceDate.getFullYear() === currentYear
-    );
-  });
+  const { thisMonth, lastMonth } = useMemo(() => {
+    const thisMonthInvoices = invoices.filter((invoice) => {
+      const d = new Date(invoice.createdAt);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
 
-  // Calculate totals
-  const totalInvoices = thisMonthInvoices.length;
-  
-  const paidInvoices = thisMonthInvoices.filter((i) => i.status === 'paid');
-  const pendingInvoices = thisMonthInvoices.filter((i) => i.status !== 'paid');
+    const lastMonthNum = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    const lastMonthInvoices = invoices.filter((invoice) => {
+      const d = new Date(invoice.createdAt);
+      return d.getMonth() === lastMonthNum && d.getFullYear() === lastMonthYear;
+    });
 
-  // Calculate amounts in PKR for consistency
-  const calculatePKR = (invoice: Invoice) => {
-    if (invoice.currency === 'PKR') {
-      return invoice.amount;
-    }
-    return invoice.convertedAmount;
-  };
+    return { thisMonth: thisMonthInvoices, lastMonth: lastMonthInvoices };
+  }, [invoices, currentMonth, currentYear]);
 
-  const totalPaidAmount = paidInvoices.reduce((sum, inv) => sum + calculatePKR(inv), 0);
-  const totalPendingAmount = pendingInvoices.reduce((sum, inv) => sum + calculatePKR(inv), 0);
+  const calcPKR = (inv: Invoice) => inv.currency === 'PKR' ? inv.amount : inv.convertedAmount;
 
-  const formatCurrency = (amount: number) => {
+  const thisMonthPaid = thisMonth.filter(i => i.status === 'paid').reduce((s, i) => s + calcPKR(i), 0);
+  const thisMonthPending = thisMonth.filter(i => i.status !== 'paid').reduce((s, i) => s + calcPKR(i), 0);
+  const lastMonthTotal = lastMonth.reduce((s, i) => s + calcPKR(i), 0);
+  const thisMonthTotal = thisMonth.reduce((s, i) => s + calcPKR(i), 0);
+
+  const change = lastMonthTotal > 0 ? Math.round(((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100) : thisMonthTotal > 0 ? 100 : 0;
+
+  const formatPKR = (amount: number) => {
     return new Intl.NumberFormat('en-PK', {
       style: 'currency',
       currency: 'PKR',
@@ -45,60 +47,48 @@ export const MonthlySummary = ({ invoices }: MonthlySummaryProps) => {
     }).format(amount);
   };
 
-  const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-  const stats = [
-    {
-      label: 'Total Invoices',
-      value: totalInvoices.toString(),
-      icon: CalendarDays,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    {
-      label: 'Paid Amount',
-      value: formatCurrency(totalPaidAmount),
-      icon: CheckCircle,
-      color: 'text-emerald-400',
-      bgColor: 'bg-emerald-500/10',
-    },
-    {
-      label: 'Pending Amount',
-      value: formatCurrency(totalPendingAmount),
-      icon: Clock,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10',
-    },
-  ];
+  const monthName = now.toLocaleDateString('en-US', { month: 'long' });
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">Monthly Summary</h3>
-          <p className="text-sm text-muted-foreground">{monthName}</p>
-        </div>
-        <div className="p-2 rounded-xl bg-primary/10">
-          <DollarSign className="w-5 h-5 text-primary" />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-center gap-3 p-3 rounded-xl bg-background/50 border border-border/50"
-          >
-            <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-              <stat.icon className={`w-4 h-4 ${stat.color}`} />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-sm font-semibold text-foreground">{stat.value}</p>
-            </div>
+    <Card className="border-border/50 overflow-hidden">
+      <CardContent className="p-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50 bg-muted/10">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">{monthName} Summary</h3>
           </div>
-        ))}
-      </div>
-    </div>
+          {change !== 0 && (
+            <Badge variant="secondary" className={`text-[10px] px-2 py-0.5 gap-1 ${change > 0 ? 'bg-chart-2/10 text-chart-2 border-chart-2/20' : 'bg-destructive/10 text-destructive border-destructive/20'}`}>
+              {change > 0 ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
+              {Math.abs(change)}% vs last month
+            </Badge>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-3 divide-x divide-border/30">
+          <div className="p-4 text-center">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <DollarSign className="w-4 h-4 text-primary" />
+            </div>
+            <p className="text-lg font-bold text-foreground">{thisMonth.length}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Invoices</p>
+          </div>
+          <div className="p-4 text-center">
+            <div className="w-8 h-8 rounded-lg bg-chart-2/10 flex items-center justify-center mx-auto mb-2">
+              <CheckCircle className="w-4 h-4 text-chart-2" />
+            </div>
+            <p className="text-lg font-bold text-foreground">{formatPKR(thisMonthPaid)}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Paid</p>
+          </div>
+          <div className="p-4 text-center">
+            <div className="w-8 h-8 rounded-lg bg-chart-4/10 flex items-center justify-center mx-auto mb-2">
+              <Clock className="w-4 h-4 text-chart-4" />
+            </div>
+            <p className="text-lg font-bold text-foreground">{formatPKR(thisMonthPending)}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Pending</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
