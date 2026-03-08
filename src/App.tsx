@@ -88,6 +88,14 @@ const App = () => {
                     </AuthGate>
                   }
                 />
+                <Route
+                  path="/dashboard/profile"
+                  element={
+                    <AuthGate>
+                      <Profile />
+                    </AuthGate>
+                  }
+                />
 
                 {/* Public shared invoice route - uses document ID */}
                 <Route path="/invoice/:shareId" element={<SharedInvoice />} />

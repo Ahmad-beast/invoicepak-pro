@@ -32,8 +32,8 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/dashboard/create', label: 'Create Invoice', icon: Plus },
     { path: '/dashboard/subscription', label: 'Subscription', icon: Crown },
+    { path: '/dashboard/profile', label: 'Profile', icon: UserCog },
     { path: '/my-story', label: 'My Story', icon: Heart },
-    // Admin link only shown to admins
     ...(!isRoleLoading && role === 'admin' ? [{ path: '/admin', label: 'Admin Panel', icon: ShieldAlert }] : []),
   ];
 
