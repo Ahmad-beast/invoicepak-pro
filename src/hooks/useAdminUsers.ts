@@ -7,7 +7,8 @@ import {
   deleteDoc, 
   Timestamp,
   query,
-  orderBy 
+  orderBy,
+  where
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { AdminUser } from '@/types/admin';
@@ -22,20 +23,29 @@ export const useAdminUsers = () => {
     setError(null);
     
     try {
-      // Fetch all users from users collection
       const usersRef = collection(db, 'users');
       const usersQuery = query(usersRef, orderBy('createdAt', 'desc'));
       const usersSnapshot = await getDocs(usersQuery);
       
-      // Fetch all roles from user_roles collection
       const rolesRef = collection(db, 'user_roles');
       const rolesSnapshot = await getDocs(rolesRef);
       
-      // Create a map of userId -> role
       const rolesMap = new Map<string, string>();
       rolesSnapshot.docs.forEach((doc) => {
         const data = doc.data();
         rolesMap.set(doc.id, data.role || 'user');
+      });
+
+      // Fetch invoice counts per user
+      const invoicesRef = collection(db, 'invoices');
+      const invoicesSnapshot = await getDocs(invoicesRef);
+      const invoiceCountMap = new Map<string, number>();
+      invoicesSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const uid = data.userId;
+        if (uid) {
+          invoiceCountMap.set(uid, (invoiceCountMap.get(uid) || 0) + 1);
+        }
       });
       
       const usersList: AdminUser[] = usersSnapshot.docs.map((doc) => {
@@ -49,6 +59,8 @@ export const useAdminUsers = () => {
           createdAt: data.createdAt?.toDate() || new Date(),
           role: (rolesMap.get(doc.id) as 'user' | 'admin') || 'user',
           isBanned: data.isBanned || false,
+          proExpiresAt: data.proExpiresAt?.toDate() || null,
+          invoiceCount: invoiceCountMap.get(doc.id) || 0,
         };
       });
       
@@ -65,30 +77,57 @@ export const useAdminUsers = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  const toggleProStatus = async (userId: string, currentPlan: 'free' | 'pro') => {
+  const grantProAccess = async (userId: string, days: number) => {
     try {
       const userRef = doc(db, 'users', userId);
-      const newPlan = currentPlan === 'pro' ? 'free' : 'pro';
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + days);
       
       await updateDoc(userRef, {
-        plan: newPlan,
-        subscriptionStatus: newPlan === 'pro' ? 'active' : null,
+        plan: 'pro',
+        subscriptionStatus: 'active',
+        proExpiresAt: Timestamp.fromDate(expiresAt),
         updatedAt: Timestamp.now(),
       });
       
-      // Update local state
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId
-            ? { ...user, plan: newPlan, subscriptionStatus: newPlan === 'pro' ? 'active' : null }
+            ? { ...user, plan: 'pro', subscriptionStatus: 'active', proExpiresAt: expiresAt }
             : user
         )
       );
       
       return { success: true };
     } catch (err) {
-      console.error('Error toggling pro status:', err);
-      return { success: false, error: 'Failed to update user plan' };
+      console.error('Error granting pro access:', err);
+      return { success: false, error: 'Failed to grant pro access' };
+    }
+  };
+
+  const revokeProAccess = async (userId: string) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      
+      await updateDoc(userRef, {
+        plan: 'free',
+        subscriptionStatus: null,
+        proExpiresAt: null,
+        updatedAt: Timestamp.now(),
+      });
+      
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId
+            ? { ...user, plan: 'free', subscriptionStatus: null, proExpiresAt: null }
+            : user
+        )
+      );
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Error revoking pro access:', err);
+      return { success: false, error: 'Failed to revoke pro access' };
     }
   };
 
@@ -102,7 +141,6 @@ export const useAdminUsers = () => {
         updatedAt: Timestamp.now(),
       });
       
-      // Update local state
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId
@@ -120,15 +158,9 @@ export const useAdminUsers = () => {
 
   const deleteUser = async (userId: string) => {
     try {
-      // Delete from users collection
       await deleteDoc(doc(db, 'users', userId));
-      
-      // Delete from user_roles collection
       await deleteDoc(doc(db, 'user_roles', userId));
-      
-      // Update local state
       setUsers((prev) => prev.filter((user) => user.id !== userId));
-      
       return { success: true };
     } catch (err) {
       console.error('Error deleting user:', err);
@@ -141,7 +173,8 @@ export const useAdminUsers = () => {
     loading,
     error,
     refetch: fetchUsers,
-    toggleProStatus,
+    grantProAccess,
+    revokeProAccess,
     toggleBanStatus,
     deleteUser,
   };

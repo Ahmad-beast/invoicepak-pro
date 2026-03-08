@@ -16,4 +16,6 @@ export interface AdminUser {
   createdAt: Date;
   role: UserRole;
   isBanned?: boolean;
+  proExpiresAt?: Date | null;
+  invoiceCount?: number;
 }
