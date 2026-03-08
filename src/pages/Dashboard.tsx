@@ -94,9 +94,6 @@ const Dashboard = () => {
         {/* Stats Cards */}
         {loading ? <DashboardStatsSkeleton /> : invoices.length > 0 && <DashboardStats invoices={invoices} />}
 
-        {/* Monthly Summary */}
-        {!loading && invoices.length > 0 && <MonthlySummary invoices={invoices} />}
-
         {/* Invoice List */}
         {(loading || invoices.length > 0) && (
           <Card className="border-border/50 overflow-hidden">
