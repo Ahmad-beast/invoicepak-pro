@@ -219,7 +219,7 @@ const Admin = () => {
               <Activity className="w-3 h-3 mr-1.5" />
               Live
             </Badge>
-            <Button variant="outline" size="sm" onClick={() => { refetch(); refetchFeedbacks(); refetchReferrals(); }} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => { refetch(); refetchFeedbacks(); }} className="gap-2">
               <RefreshCw className={`w-3.5 h-3.5 ${usersLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
