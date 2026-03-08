@@ -7,6 +7,7 @@ import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, S
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { FeedbackDialog } from './FeedbackDialog';
+import { MobileBottomNav } from './MobileBottomNav';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
