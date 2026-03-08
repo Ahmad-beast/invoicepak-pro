@@ -206,6 +206,7 @@ export const CreateInvoiceForm = () => {
     setInvoicePrefix('');
     setCompanyName('');
     setCompanyLogo(null);
+    setShowExchangeRate(true);
     setOpenSections(['client-basics']);
     toast.success('Form reset');
   };
