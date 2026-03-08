@@ -107,6 +107,7 @@ export const CreateInvoiceForm = () => {
         setUseCustomRate(true);
         setCustomRate(String(editingInvoice.customExchangeRate));
       }
+      if (editingInvoice.showExchangeRate !== undefined) setShowExchangeRate(editingInvoice.showExchangeRate);
       setEditLoaded(true);
     }
   }, [editingInvoice, editLoaded]);
