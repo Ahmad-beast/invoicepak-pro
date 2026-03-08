@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { WhatsNewDialog } from '@/components/dashboard/WhatsNewDialog';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
@@ -21,7 +22,7 @@ import {
   Zap,
   Crown
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user } = useAuth();
