@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageCircle, Lightbulb, Heart } from 'lucide-react';
+import { FileText, LogOut, Plus, LayoutDashboard, Menu, X, ChevronLeft, Crown, ShieldAlert, MessageCircle, Lightbulb, Heart, UserCog } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { FeedbackDialog } from './FeedbackDialog';
