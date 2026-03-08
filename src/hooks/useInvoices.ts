@@ -152,5 +152,21 @@ export const useInvoices = () => {
     }
   };
 
-  return { invoices, loading, createInvoice, updateInvoiceStatus, deleteInvoice };
+  const updateInvoice = async (id: string, data: Partial<Omit<Invoice, 'id' | 'userId' | 'createdAt' | 'invoiceNumber' | 'shareId'>>) => {
+    if (!user) return false;
+    try {
+      const sanitizedData = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+      );
+      await updateDoc(doc(db, 'invoices', id), sanitizedData);
+      toast.success('Invoice updated successfully');
+      return true;
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      toast.error('Failed to update invoice');
+      return false;
+    }
+  };
+
+  return { invoices, loading, createInvoice, updateInvoiceStatus, deleteInvoice, updateInvoice };
 };

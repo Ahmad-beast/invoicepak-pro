@@ -277,10 +277,24 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     : (invoice.amount || 0);
 
   const convRate = invoice.conversionRate || 1;
-  const convertedAmt = invoice.currency === 'USD'
-    ? totalAmount * convRate
-    : totalAmount / convRate;
-  const convertedCurr = invoice.currency === 'USD' ? 'PKR' : 'USD';
+  const invoiceCurr = invoice.currency || 'USD';
+  
+  // Determine converted currency and amount based on invoice currency
+  let convertedAmt: number;
+  let convertedCurr: string;
+  let rateLabel: string;
+
+  if (invoiceCurr === 'PKR') {
+    // PKR invoice → show USD equivalent
+    convertedAmt = totalAmount / convRate;
+    convertedCurr = 'USD';
+    rateLabel = `1 USD = ${convRate.toFixed(2)} PKR`;
+  } else {
+    // Any non-PKR currency → show PKR equivalent
+    convertedAmt = totalAmount * convRate;
+    convertedCurr = 'PKR';
+    rateLabel = `1 ${invoiceCurr} = ${convRate.toFixed(2)} PKR`;
+  }
 
   // Notes (left side)
   if (invoice.notes) {
@@ -298,14 +312,14 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   const tl = totX + 6;
   const tv = mr - 6;
 
-  // Subtotal
-  txt(`Subtotal (${invoice.currency})`, tl, tY, { size: 9, color: C.text });
-  txt(money(totalAmount, invoice.currency), tv, tY, { size: 9, bold: true, color: C.dark, align: 'right' });
+  // Subtotal in invoice currency
+  txt(`Subtotal (${invoiceCurr})`, tl, tY, { size: 9, color: C.text });
+  txt(money(totalAmount, invoiceCurr), tv, tY, { size: 9, bold: true, color: C.dark, align: 'right' });
 
   tY += 9;
   // Exchange rate
   txt('Exchange Rate', tl, tY, { size: 9, color: C.muted });
-  txt(`1 USD = ${convRate.toFixed(2)} PKR`, tv, tY, { size: 8, color: C.text, align: 'right' });
+  txt(rateLabel, tv, tY, { size: 8, color: C.text, align: 'right' });
 
   tY += 9;
   // Divider

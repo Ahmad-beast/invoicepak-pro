@@ -65,10 +65,14 @@ export const CreateInvoiceForm = () => {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(['client-basics']);
 
-  const { createInvoice } = useInvoices();
+  const { invoices, createInvoice, updateInvoice } = useInvoices();
   const { templates: noteTemplates, addTemplate: addNoteTemplate, deleteTemplate: deleteNoteTemplate } = useNoteTemplates();
   const { canCreateInvoice, getRemainingInvoices, incrementInvoiceCount, canUseFeature, subscription, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const editingInvoice = editId ? invoices.find(inv => inv.id === editId) : null;
+  const isEditing = !!editingInvoice;
   
   const defaultRate = getDefaultRateToPKR(currency);
   const activeRate = useCustomRate && customRate ? parseFloat(customRate) : defaultRate;
