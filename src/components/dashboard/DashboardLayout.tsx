@@ -185,7 +185,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           'mt-16 md:mt-0'
         )}
       >
-        <div className="p-6 md:p-8">
+        <div className="p-6 md:p-8 pb-20 md:pb-8">
           {children}
         </div>
       </main>

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { InvoicePreview } from './InvoicePreview';
 import { InvoiceTemplateManager } from './InvoiceTemplateManager';
+import { SuccessAnimation } from './SuccessAnimation';
 import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { InvoiceItem, InvoiceTemplate, CurrencyCode } from '@/types/invoice';
