@@ -11,8 +11,10 @@ import { Footer } from '@/components/landing/Footer';
 import { SEO } from '@/components/SEO';
 import { GlobalBanner } from '@/components/GlobalBanner';
 import { ScrollReveal } from '@/components/ScrollReveal';
+import { useReferralTracker } from '@/hooks/useReferralTracker';
 
 const Landing = () => {
+  useReferralTracker();
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <SEO
