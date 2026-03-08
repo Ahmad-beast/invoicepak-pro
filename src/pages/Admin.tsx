@@ -5,6 +5,7 @@ import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useFeedback } from '@/hooks/useFeedback';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { BannerManager } from '@/components/admin/BannerManager';
+import { UserDetailSheet } from '@/components/admin/UserDetailSheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,11 +30,8 @@ import {
 } from '@/components/ui/table';
 import { 
   Crown, 
-  Trash2, 
   RefreshCw, 
   ShieldAlert, 
-  Ban, 
-  UserCheck, 
   Users, 
   Search,
   MessageSquare,
@@ -44,18 +42,19 @@ import {
   Eye,
   Zap,
   Activity,
-  Mail
+  Mail,
+  FileText,
+  ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import type { AdminUser } from '@/types/admin';
 
-// Helper to get display name or fallback to email prefix
 const getDisplayName = (displayName: string | null, email: string): string => {
   if (displayName) return displayName;
   return email.split('@')[0] || 'Unknown';
 };
 
-// Helper to get initials
 const getInitials = (displayName: string | null, email: string): string => {
   const name = displayName || email.split('@')[0] || 'U';
   return name.substring(0, 2).toUpperCase();
@@ -66,20 +65,20 @@ type PlanFilter = 'all' | 'pro' | 'free';
 const Admin = () => {
   const navigate = useNavigate();
   const { isAdmin, isRoleLoading: roleLoading } = useAuth();
-  const { users, loading: usersLoading, refetch, toggleProStatus, toggleBanStatus, deleteUser } = useAdminUsers();
+  const { users, loading: usersLoading, refetch, grantProAccess, revokeProAccess, toggleBanStatus, deleteUser } = useAdminUsers();
   const { feedbacks, loading: feedbacksLoading, refetch: refetchFeedbacks, markAsRead } = useFeedback();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Redirect non-admins to dashboard
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
       navigate('/dashboard', { replace: true });
     }
   }, [isAdmin, roleLoading, navigate]);
 
-  // Filtered users based on search and plan filter
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
       const searchLower = searchQuery.toLowerCase();
@@ -87,22 +86,42 @@ const Admin = () => {
         searchQuery === '' ||
         user.email.toLowerCase().includes(searchLower) ||
         (user.displayName?.toLowerCase().includes(searchLower));
-      
-      const matchesPlan = 
-        planFilter === 'all' ||
-        user.plan === planFilter;
-      
+      const matchesPlan = planFilter === 'all' || user.plan === planFilter;
       return matchesSearch && matchesPlan;
     });
   }, [users, searchQuery, planFilter]);
 
-  const handleTogglePro = async (userId: string, currentPlan: 'free' | 'pro') => {
-    const result = await toggleProStatus(userId, currentPlan);
-    if (result.success) {
-      toast.success(`User plan updated to ${currentPlan === 'pro' ? 'Free' : 'Pro'}`);
-    } else {
-      toast.error(result.error || 'Failed to update user');
+  // Keep selected user in sync with users list
+  useEffect(() => {
+    if (selectedUser) {
+      const updated = users.find(u => u.id === selectedUser.id);
+      if (updated) setSelectedUser(updated);
     }
+  }, [users]);
+
+  const handleUserClick = (user: AdminUser) => {
+    setSelectedUser(user);
+    setSheetOpen(true);
+  };
+
+  const handleGrantPro = async (userId: string, days: number) => {
+    const result = await grantProAccess(userId, days);
+    if (result.success) {
+      toast.success(`Pro access granted for ${days} days`);
+    } else {
+      toast.error(result.error || 'Failed to grant pro access');
+    }
+    return result;
+  };
+
+  const handleRevokePro = async (userId: string) => {
+    const result = await revokeProAccess(userId);
+    if (result.success) {
+      toast.success('Pro access revoked');
+    } else {
+      toast.error(result.error || 'Failed to revoke pro access');
+    }
+    return result;
   };
 
   const handleToggleBan = async (userId: string, currentStatus: boolean) => {
@@ -112,18 +131,22 @@ const Admin = () => {
     } else {
       toast.error(result.error || 'Failed to update user');
     }
+    return result;
   };
 
-  const handleDeleteUser = async (userId: string, email: string) => {
+  const handleDeleteUser = (userId: string, email: string) => {
     const confirmed = window.confirm(`Are you sure you want to delete ${email}? This action cannot be undone.`);
     if (!confirmed) return;
     
-    const result = await deleteUser(userId);
-    if (result.success) {
-      toast.success('User deleted successfully');
-    } else {
-      toast.error(result.error || 'Failed to delete user');
-    }
+    deleteUser(userId).then((result) => {
+      if (result.success) {
+        toast.success('User deleted successfully');
+        setSheetOpen(false);
+        setSelectedUser(null);
+      } else {
+        toast.error(result.error || 'Failed to delete user');
+      }
+    });
   };
 
   const handleMarkAsRead = async (feedbackId: string) => {
@@ -151,7 +174,6 @@ const Admin = () => {
     }
   };
 
-  // Show loading while checking role
   if (roleLoading) {
     return (
       <DashboardLayout>
@@ -162,10 +184,7 @@ const Admin = () => {
     );
   }
 
-  // Don't render if not admin (redirect will happen)
-  if (!isAdmin) {
-    return null;
-  }
+  if (!isAdmin) return null;
 
   const proUsersCount = users.filter((u) => u.plan === 'pro').length;
   const freeUsersCount = users.filter((u) => u.plan === 'free').length;
@@ -193,9 +212,8 @@ const Admin = () => {
           </Badge>
         </div>
 
-        {/* Stats Cards - Enhanced Design */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total Users Card */}
           <Card className="relative overflow-hidden border-border/50 bg-gradient-to-br from-card to-muted/20">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -218,7 +236,6 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          {/* Pro Users Card */}
           <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -240,7 +257,6 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          {/* Active Subscriptions Card */}
           <Card className="relative overflow-hidden border-border/50 bg-gradient-to-br from-card to-muted/20">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -263,7 +279,6 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          {/* Feedback Card */}
           <Card className={`relative overflow-hidden border-border/50 ${newFeedbackCount > 0 ? 'bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20' : 'bg-gradient-to-br from-card to-muted/20'}`}>
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -286,10 +301,8 @@ const Admin = () => {
           </Card>
         </div>
 
-        {/* Global Banner Manager */}
         <BannerManager />
 
-        {/* Tabs Section */}
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="h-12 p-1 bg-muted/50 border border-border">
             <TabsTrigger value="users" className="gap-2 px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm">
@@ -311,7 +324,6 @@ const Admin = () => {
 
           {/* User Management Tab */}
           <TabsContent value="users" className="space-y-4 mt-0">
-            {/* Search and Filter Bar */}
             <Card className="border-border/50">
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -348,16 +360,17 @@ const Admin = () => {
               </CardContent>
             </Card>
 
-            {/* Users Table */}
+            {/* Users Table - Clickable Rows */}
             <Card className="border-border/50 overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
                     <TableHead className="font-semibold">User</TableHead>
                     <TableHead className="font-semibold">Plan</TableHead>
+                    <TableHead className="font-semibold hidden md:table-cell">Invoices</TableHead>
                     <TableHead className="font-semibold hidden md:table-cell">Status</TableHead>
                     <TableHead className="font-semibold hidden lg:table-cell">Joined</TableHead>
-                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                    <TableHead className="font-semibold w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -374,14 +387,15 @@ const Admin = () => {
                           </div>
                         </TableCell>
                         <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-10" /></TableCell>
                         <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                         <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-4" /></TableCell>
                       </TableRow>
                     ))
                   ) : filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-32">
+                      <TableCell colSpan={6} className="h-32">
                         <div className="flex flex-col items-center justify-center text-muted-foreground">
                           <Users className="w-10 h-10 mb-2 opacity-40" />
                           <p>{searchQuery || planFilter !== 'all' ? 'No users match your filters' : 'No users found'}</p>
@@ -392,7 +406,8 @@ const Admin = () => {
                     filteredUsers.map((user) => (
                       <TableRow 
                         key={user.id}
-                        className={user.isBanned ? 'bg-destructive/5' : ''}
+                        className={`cursor-pointer transition-colors hover:bg-muted/20 ${user.isBanned ? 'bg-destructive/5' : ''}`}
+                        onClick={() => handleUserClick(user)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -429,6 +444,12 @@ const Admin = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <FileText className="w-3.5 h-3.5" />
+                            {user.invoiceCount ?? 0}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <div className="flex items-center gap-1.5">
                             <div className={`w-2 h-2 rounded-full ${user.subscriptionStatus === 'active' ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
                             <span className="text-sm text-muted-foreground">
@@ -440,37 +461,7 @@ const Admin = () => {
                           {format(user.createdAt, 'MMM d, yyyy')}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleTogglePro(user.id, user.plan)}
-                              className="h-8 px-2.5"
-                            >
-                              <Crown className="w-4 h-4 mr-1" />
-                              <span className="hidden xl:inline">{user.plan === 'pro' ? 'Remove Pro' : 'Make Pro'}</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggleBan(user.id, user.isBanned || false)}
-                              className={`h-8 px-2.5 ${user.isBanned ? 'text-primary hover:text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                            >
-                              {user.isBanned ? (
-                                <UserCheck className="w-4 h-4" />
-                              ) : (
-                                <Ban className="w-4 h-4" />
-                              )}
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteUser(user.id, user.email)}
-                              className="h-8 px-2.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         </TableCell>
                       </TableRow>
                     ))
@@ -479,7 +470,6 @@ const Admin = () => {
               </Table>
             </Card>
 
-            {/* Results count */}
             {!usersLoading && (
               <p className="text-sm text-muted-foreground">
                 Showing {filteredUsers.length} of {users.length} users
@@ -584,6 +574,17 @@ const Admin = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* User Detail Sheet */}
+      <UserDetailSheet
+        user={selectedUser}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onGrantPro={handleGrantPro}
+        onRevokePro={handleRevokePro}
+        onToggleBan={handleToggleBan}
+        onDelete={handleDeleteUser}
+      />
     </DashboardLayout>
   );
 };
