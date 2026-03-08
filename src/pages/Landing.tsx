@@ -10,6 +10,7 @@ import { CTA } from '@/components/landing/CTA';
 import { Footer } from '@/components/landing/Footer';
 import { SEO } from '@/components/SEO';
 import { GlobalBanner } from '@/components/GlobalBanner';
+import { ScrollReveal } from '@/components/ScrollReveal';
 
 const Landing = () => {
   return (
@@ -23,24 +24,42 @@ const Landing = () => {
       <GlobalBanner />
       <Navbar />
       <main className="flex-grow">
-        <Hero />
-      <Stats />
-      <div id="features">
-        <Features />
-      </div>
-      <div id="how-it-works">
-        <HowItWorks />
-      </div>
-      <Testimonials />
-      <div id="pricing">
-        <Pricing />
-      </div>
-      <div id="faq">
-        <FAQ />
-      </div>
-        <CTA />
+        <ScrollReveal direction="none">
+          <Hero />
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <Stats />
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <div id="features">
+            <Features />
+          </div>
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <div id="how-it-works">
+            <HowItWorks />
+          </div>
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <Testimonials />
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <div id="pricing">
+            <Pricing />
+          </div>
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <div id="faq">
+            <FAQ />
+          </div>
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <CTA />
+        </ScrollReveal>
       </main>
-      <Footer />
+      <ScrollReveal delay={50} direction="none">
+        <Footer />
+      </ScrollReveal>
     </div>
   );
 };
