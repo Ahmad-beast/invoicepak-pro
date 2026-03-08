@@ -57,6 +57,7 @@ export const CreateInvoiceForm = () => {
   
   const [useCustomRate, setUseCustomRate] = useState(false);
   const [customRate, setCustomRate] = useState('');
+  const [showExchangeRate, setShowExchangeRate] = useState(true);
   const [invoicePrefix, setInvoicePrefix] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);

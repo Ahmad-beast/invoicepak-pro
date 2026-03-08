@@ -42,6 +42,8 @@ export interface Invoice {
   invoicePrefix?: string;
   // Multiple line items
   items?: InvoiceItem[];
+  // Whether to show exchange rate section on PDF
+  showExchangeRate?: boolean;
   // Company branding (Pro feature)
   companyName?: string;
   companyLogo?: string; // Base64 image string
