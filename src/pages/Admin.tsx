@@ -197,8 +197,7 @@ const Admin = () => {
     return diff < 7 * 24 * 60 * 60 * 1000;
   });
 
-  // Today's referral visits
-  const todayReferrals = sourceStats.reduce((sum, s) => sum + s.todayCount, 0);
+  const todayReferrals = todayReferralsCount;
 
   return (
     <DashboardLayout>
