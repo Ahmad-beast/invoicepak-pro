@@ -302,34 +302,44 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
     txt(invoice.notes, ml, y + 5, { size: 8, maxWidth: cw * 0.48, color: C.muted });
   }
 
+  const shouldShowExchange = invoice.showExchangeRate !== false;
+
   // Totals box (right side)
   const totW = cw * 0.42;
   const totX = mr - totW;
+  const totBoxH = shouldShowExchange ? 48 : 22;
 
-  rect(totX, y - 2, totW, 48, C.bg, 3);
+  rect(totX, y - 2, totW, totBoxH, C.bg, 3);
 
   let tY = y + 4;
   const tl = totX + 6;
   const tv = mr - 6;
 
-  // Subtotal in invoice currency
-  txt(`Subtotal (${invoiceCurr})`, tl, tY, { size: 9, color: C.text });
-  txt(money(totalAmount, invoiceCurr), tv, tY, { size: 9, bold: true, color: C.dark, align: 'right' });
+  if (shouldShowExchange) {
+    // Subtotal in invoice currency
+    txt(`Subtotal (${invoiceCurr})`, tl, tY, { size: 9, color: C.text });
+    txt(money(totalAmount, invoiceCurr), tv, tY, { size: 9, bold: true, color: C.dark, align: 'right' });
 
-  tY += 9;
-  // Exchange rate
-  txt('Exchange Rate', tl, tY, { size: 9, color: C.muted });
-  txt(rateLabel, tv, tY, { size: 8, color: C.text, align: 'right' });
+    tY += 9;
+    // Exchange rate
+    txt('Exchange Rate', tl, tY, { size: 9, color: C.muted });
+    txt(rateLabel, tv, tY, { size: 8, color: C.text, align: 'right' });
 
-  tY += 9;
-  // Divider
-  line(tl, tY, tv, C.border, 0.3);
+    tY += 9;
+    // Divider
+    line(tl, tY, tv, C.border, 0.3);
 
-  tY += 6;
-  // Total in converted currency (highlighted)
-  rect(totX + 3, tY - 3, totW - 6, 14, C.primaryLight, 2);
-  txt(`Total (${convertedCurr})`, tl + 2, tY, { size: 10, bold: true, color: C.primary });
-  txt(money(convertedAmt, convertedCurr), tv - 2, tY, { size: 13, bold: true, color: C.primary, align: 'right' });
+    tY += 6;
+    // Total in converted currency (highlighted)
+    rect(totX + 3, tY - 3, totW - 6, 14, C.primaryLight, 2);
+    txt(`Total (${convertedCurr})`, tl + 2, tY, { size: 10, bold: true, color: C.primary });
+    txt(money(convertedAmt, convertedCurr), tv - 2, tY, { size: 13, bold: true, color: C.primary, align: 'right' });
+  } else {
+    // Just show total in invoice currency
+    rect(totX + 3, tY - 3, totW - 6, 14, C.primaryLight, 2);
+    txt(`Total (${invoiceCurr})`, tl + 2, tY, { size: 10, bold: true, color: C.primary });
+    txt(money(totalAmount, invoiceCurr), tv - 2, tY, { size: 13, bold: true, color: C.primary, align: 'right' });
+  }
 
   // ── Thank You ──
   y = Math.max(y + 55, tY + 20);
