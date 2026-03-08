@@ -7,7 +7,7 @@ const navLinks = [
   { href: '#features', label: 'Features', isAnchor: true },
   { href: '#how-it-works', label: 'How It Works', isAnchor: true },
   { href: '#pricing', label: 'Pricing', isAnchor: true },
-  { href: '/my-story', label: 'My Story', isAnchor: false },
+  { href: '/blog', label: 'Blog', isAnchor: false },
   { href: '#faq', label: 'FAQ', isAnchor: true },
 ];
 
@@ -25,10 +25,10 @@ export const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <FileText className="w-5 h-5 text-primary-foreground" />
+      <div className="container mx-auto px-4 py-3.5 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+            <FileText className="w-4.5 h-4.5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold text-foreground">InvoicePK</span>
         </Link>
@@ -41,7 +41,7 @@ export const Navbar = () => {
                 key={link.href}
                 href={link.href}
                 onClick={(e) => scrollToSection(e, link.href)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
                 {link.label}
               </a>
@@ -49,7 +49,7 @@ export const Navbar = () => {
               <Link
                 key={link.href}
                 to={link.href}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
               >
                 {link.label}
               </Link>
@@ -57,35 +57,35 @@ export const Navbar = () => {
           ))}
         </div>
         
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-3">
           <Link to="/login">
-            <Button variant="ghost">Sign In</Button>
+            <Button variant="ghost" size="sm">Sign In</Button>
           </Link>
           <Link to="/signup">
-            <Button>Get Started</Button>
+            <Button size="sm">Get Started</Button>
           </Link>
         </div>
 
         {/* Mobile Menu Button */}
         <button
-          className="md:hidden p-2 text-foreground"
+          className="md:hidden p-2 text-foreground rounded-lg hover:bg-muted transition-colors"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-background border-b border-border px-4 py-4">
-          <div className="flex flex-col gap-4">
+        <div className="md:hidden bg-background border-b border-border px-4 py-4 animate-in slide-in-from-top-2">
+          <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               link.isAnchor ? (
                 <a
                   key={link.href}
                   href={link.href}
                   onClick={(e) => scrollToSection(e, link.href)}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                  className="text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors py-2.5 px-3 rounded-lg font-medium"
                 >
                   {link.label}
                 </a>
@@ -94,15 +94,15 @@ export const Navbar = () => {
                   key={link.href}
                   to={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                  className="text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors py-2.5 px-3 rounded-lg font-medium"
                 >
                   {link.label}
                 </Link>
               )
             ))}
-            <div className="flex flex-col gap-2 pt-4 border-t border-border">
+            <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-border">
               <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="ghost" className="w-full">Sign In</Button>
+                <Button variant="outline" className="w-full">Sign In</Button>
               </Link>
               <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
                 <Button className="w-full">Get Started</Button>

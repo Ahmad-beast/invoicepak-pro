@@ -44,9 +44,9 @@ const features = [
   },
   {
     icon: Globe,
-    title: 'Work Globally',
-    description: 'Invoice clients worldwide with multi-currency support and professional formatting.',
-    highlight: null,
+    title: 'Multi-Currency',
+    description: 'Invoice clients worldwide with support for USD, PKR, GBP, EUR, AED, SAR, CAD, and AUD.',
+    highlight: '8 Currencies',
   },
   {
     icon: Smartphone,
@@ -57,7 +57,7 @@ const features = [
   {
     icon: BarChart3,
     title: 'Track Payments',
-    description: 'Monitor invoice status and track your earnings with a simple dashboard.',
+    description: 'Monitor invoice status and track your earnings with a simple, clean dashboard.',
     highlight: 'Analytics',
   },
 ];
@@ -71,33 +71,33 @@ const highlights = [
 
 export const Features = () => {
   return (
-    <section className="py-20 px-4 relative overflow-hidden">
+    <section className="py-24 px-4 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       
       <div className="container mx-auto relative z-10">
         <div className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 text-primary text-sm font-medium uppercase tracking-wider mb-2">
-            <Zap className="w-4 h-4" />
-            Features
-          </span>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mt-2">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+            <Zap className="w-4 h-4 text-primary" />
+            <span className="text-sm text-muted-foreground font-medium">Features</span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mt-2 tracking-tight">
             Everything You Need to Get Paid
           </h2>
-          <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
+          <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
             Powerful features designed specifically for Pakistani freelancers and remote workers.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto mb-16">
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <div
               key={feature.title}
-              className="group relative p-6 rounded-2xl bg-card border border-border hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
+              className="group relative p-6 rounded-2xl bg-card border border-border hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
             >
               {feature.highlight && (
-                <span className="absolute -top-2 right-4 px-2 py-0.5 text-[10px] font-medium bg-primary text-primary-foreground rounded-full">
+                <span className="absolute -top-2.5 right-4 px-3 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground rounded-full">
                   {feature.highlight}
                 </span>
               )}
@@ -111,7 +111,7 @@ export const Features = () => {
         </div>
 
         {/* Highlights bar */}
-        <div className="bg-card/50 border border-border rounded-2xl p-6 max-w-4xl mx-auto">
+        <div className="bg-card border border-border rounded-2xl p-6 max-w-4xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {highlights.map((highlight) => (
               <div key={highlight} className="flex items-center gap-2 text-sm">
