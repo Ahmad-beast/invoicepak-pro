@@ -19,7 +19,7 @@ import { useNoteTemplates } from '@/hooks/useNoteTemplates';
 import { useInvoiceTemplates } from '@/hooks/useInvoiceTemplates';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
   ArrowRight, RefreshCw, FileText, CalendarIcon, Loader2, Plus, Trash2, BookOpen, 
