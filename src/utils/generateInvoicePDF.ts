@@ -309,7 +309,7 @@ export const generateInvoicePDF = (invoice: Invoice, removeBranding: boolean = f
   const totX = mr - totW;
   const totBoxH = shouldShowExchange ? 48 : 22;
 
-  rect(totX, y - 2, totW, boxH, C.bg, 3);
+  rect(totX, y - 2, totW, totBoxH, C.bg, 3);
 
   let tY = y + 4;
   const tl = totX + 6;
