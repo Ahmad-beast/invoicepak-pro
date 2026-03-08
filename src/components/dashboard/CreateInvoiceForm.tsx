@@ -656,55 +656,73 @@ export const CreateInvoiceForm = () => {
                     </Select>
                   </div>
 
-                  {/* Conversion Rate */}
-                  <div className="p-3 rounded-xl bg-muted/30 border border-border space-y-3">
+                  {/* Show Exchange Rate Toggle */}
+                  <div className="p-3 rounded-xl bg-muted/30 border border-border">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <Label className="text-sm font-medium">Conversion Rate to PKR</Label>
-                          {!canUseCustomRate && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <Crown className="w-3 h-3" />
-                              Pro
-                            </span>
-                          )}
-                        </div>
+                        <Label className="text-sm font-medium">Show Exchange Rate on Invoice</Label>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {currency === 'PKR' ? 'No conversion needed' : `Default: 1 ${currency} = ${getDefaultRateToPKR(currency)} PKR`}
+                          Display exchange rate and converted amount in PDF
                         </p>
                       </div>
-                      {currency !== 'PKR' && (
-                        <Switch
-                          checked={useCustomRate && canUseCustomRate}
-                          onCheckedChange={(checked) => {
-                            if (!canUseCustomRate) {
-                              toast.error('Custom exchange rate is a Pro feature.');
-                              return;
-                            }
-                            setUseCustomRate(checked);
-                          }}
-                          disabled={!canUseCustomRate}
-                        />
+                      <Switch
+                        checked={showExchangeRate}
+                        onCheckedChange={setShowExchangeRate}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Conversion Rate */}
+                  {showExchangeRate && (
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium">Conversion Rate to PKR</Label>
+                            {!canUseCustomRate && (
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Crown className="w-3 h-3" />
+                                Pro
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {currency === 'PKR' ? 'No conversion needed' : `Default: 1 ${currency} = ${getDefaultRateToPKR(currency)} PKR`}
+                          </p>
+                        </div>
+                        {currency !== 'PKR' && (
+                          <Switch
+                            checked={useCustomRate && canUseCustomRate}
+                            onCheckedChange={(checked) => {
+                              if (!canUseCustomRate) {
+                                toast.error('Custom exchange rate is a Pro feature.');
+                                return;
+                              }
+                              setUseCustomRate(checked);
+                            }}
+                            disabled={!canUseCustomRate}
+                          />
+                        )}
+                      </div>
+                      {useCustomRate && canUseCustomRate && currency !== 'PKR' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="customRate" className="text-sm font-medium">
+                            Exchange Rate (1 {currency} = ? PKR)
+                          </Label>
+                          <Input
+                            id="customRate"
+                            type="number"
+                            value={customRate}
+                            onChange={(e) => setCustomRate(e.target.value)}
+                            placeholder={getDefaultRateToPKR(currency).toString()}
+                            min="0"
+                            step="0.01"
+                            className="bg-background border-border h-10"
+                          />
+                        </div>
                       )}
                     </div>
-                    {useCustomRate && canUseCustomRate && currency !== 'PKR' && (
-                      <div className="space-y-2">
-                        <Label htmlFor="customRate" className="text-sm font-medium">
-                          Exchange Rate (1 {currency} = ? PKR)
-                        </Label>
-                        <Input
-                          id="customRate"
-                          type="number"
-                          value={customRate}
-                          onChange={(e) => setCustomRate(e.target.value)}
-                          placeholder={getDefaultRateToPKR(currency).toString()}
-                          min="0"
-                          step="0.01"
-                          className="bg-background border-border h-10"
-                        />
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
 
