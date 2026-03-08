@@ -210,7 +210,7 @@ export const CreateInvoiceForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canCreate) {
+    if (!isEditing && !canCreate) {
       toast.error("You've reached your monthly invoice limit. Upgrade to Pro for unlimited invoices.");
       return;
     }
@@ -227,29 +227,55 @@ export const CreateInvoiceForm = () => {
     }
 
     setIsSubmitting(true);
-    const invoice = await createInvoice({
-      clientName,
-      serviceDescription,
-      amount: totalAmount,
-      currency,
-      status,
-      invoiceDate: invoiceDate.toISOString(),
-      dueDate: dueDate.toISOString(),
-      senderName,
-      notes: notes || undefined,
-      customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
-      invoicePrefix: invoicePrefix.trim() || undefined,
-      items: validItems,
-      companyName: isPro && companyName.trim() ? companyName.trim() : undefined,
-      companyLogo: isPro && companyLogo ? companyLogo : undefined,
-    });
 
-    if (invoice) {
-      await incrementInvoiceCount();
-      toast.success('Invoice created successfully!');
-      navigate('/dashboard');
+    const rateToPKR = useCustomRate && canUseCustomRate ? parseFloat(customRate) : getDefaultRateToPKR(currency);
+    const convertedAmount = currency === 'PKR' ? totalAmount / rateToPKR : totalAmount * rateToPKR;
+
+    if (isEditing && editId) {
+      const success = await updateInvoice(editId, {
+        clientName,
+        serviceDescription,
+        amount: totalAmount,
+        currency,
+        status,
+        invoiceDate: invoiceDate.toISOString(),
+        dueDate: dueDate.toISOString(),
+        senderName,
+        notes: notes || '',
+        customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
+        items: validItems,
+        companyName: isPro && companyName.trim() ? companyName.trim() : undefined,
+        companyLogo: isPro && companyLogo ? companyLogo : undefined,
+        convertedAmount: Math.round(convertedAmount * 100) / 100,
+        conversionRate: rateToPKR,
+        paidAt: status === 'paid' ? (editingInvoice?.paidAt || new Date().toISOString()) : null,
+      });
+      if (success) navigate('/dashboard');
     } else {
-      toast.error('Failed to create invoice');
+      const invoice = await createInvoice({
+        clientName,
+        serviceDescription,
+        amount: totalAmount,
+        currency,
+        status,
+        invoiceDate: invoiceDate.toISOString(),
+        dueDate: dueDate.toISOString(),
+        senderName,
+        notes: notes || undefined,
+        customExchangeRate: useCustomRate && canUseCustomRate ? parseFloat(customRate) : undefined,
+        invoicePrefix: invoicePrefix.trim() || undefined,
+        items: validItems,
+        companyName: isPro && companyName.trim() ? companyName.trim() : undefined,
+        companyLogo: isPro && companyLogo ? companyLogo : undefined,
+      });
+
+      if (invoice) {
+        await incrementInvoiceCount();
+        toast.success('Invoice created successfully!');
+        navigate('/dashboard');
+      } else {
+        toast.error('Failed to create invoice');
+      }
     }
     setIsSubmitting(false);
   };
