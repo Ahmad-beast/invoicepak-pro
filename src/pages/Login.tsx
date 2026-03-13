@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'; // useSearchParams add kiya
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { FileText, ArrowLeft, Shield, Zap, Globe } from 'lucide-react';
@@ -21,7 +20,6 @@ const Login = () => {
   const { login, signInWithGoogle } = useAuth();
   
   const navigate = useNavigate();
-  // Yahan hum URL se 'redirect' parameter nikal rahe hain
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
 
@@ -33,7 +31,6 @@ const Login = () => {
     
     if (result.success) {
       toast.success('Welcome back!');
-      // Hardcoded '/dashboard' ki jagah redirectTo use kiya
       navigate(redirectTo);
     } else {
       toast.error(result.error || 'Invalid email or password');
@@ -49,7 +46,6 @@ const Login = () => {
     
     if (result.success) {
       toast.success('Welcome back!');
-      // Yahan bhi redirectTo use kiya
       navigate(redirectTo);
     } else {
       toast.error(result.error || 'Failed to sign in with Google');
@@ -194,7 +190,6 @@ const Login = () => {
 
               <p className="text-center text-sm text-muted-foreground">
                 Don't have an account?{' '}
-                {/* Note: App agar Signup se aayenge redirect link toot na jaye, isliye state me redirect pass karna better hai, but abhi simple rakhte hain */}
                 <Link to={`/signup${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`} className="text-primary hover:underline font-medium">
                   Sign up
                 </Link>
