@@ -28,6 +28,7 @@ import CookieSettings from "./pages/CookieSettings";
 import MyStory from "./pages/MyStory";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import Activate from "./pages/Activate";
 
 const queryClient = new QueryClient();
 
