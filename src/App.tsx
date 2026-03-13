@@ -21,6 +21,7 @@ import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import FreelancerGuidePakistan from "./pages/blog/freelancer-guide-pakistan";
 import InvoiceGuide from "./pages/blog/invoice-guide";
+import StartFreelancingPakistan2026 from "./pages/blog/start-freelancing-pakistan-2026";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookieSettings from "./pages/CookieSettings";
