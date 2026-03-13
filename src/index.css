@@ -78,6 +78,10 @@
   }
 
   html {
+    scroll-behavior: auto;
+  }
+
+  html.smooth-scroll {
     scroll-behavior: smooth;
   }
 
