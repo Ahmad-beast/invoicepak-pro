@@ -31,6 +31,7 @@ import {
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { toast } from 'sonner';
 import type { AdminUser } from '@/types/admin';
+import { GiftProSection } from './GiftProSection';
 
 interface UserDetailSheetProps {
   user: AdminUser | null;
@@ -250,6 +251,11 @@ export const UserDetailSheet = ({
               </Card>
             )}
           </div>
+
+          <Separator className="bg-border/50" />
+
+          {/* Gift Pro Access */}
+          <GiftProSection userId={user.id} userEmail={user.email} />
 
           <Separator className="bg-border/50" />
 

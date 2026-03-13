@@ -28,6 +28,7 @@ import CookieSettings from "./pages/CookieSettings";
 import MyStory from "./pages/MyStory";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import Activate from "./pages/Activate";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +101,9 @@ const App = () => {
 
                 {/* Public shared invoice route - uses document ID */}
                 <Route path="/invoice/:shareId" element={<SharedInvoice />} />
+
+                {/* Gift Pro activation */}
+                <Route path="/activate" element={<Activate />} />
 
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/freelancer-guide-pakistan" element={<FreelancerGuidePakistan />} />
