@@ -104,6 +104,8 @@ const App = () => {
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/freelancer-guide-pakistan" element={<FreelancerGuidePakistan />} />
                 <Route path="/blog/invoice-guide" element={<InvoiceGuide />} />
+                <Route path="/blog/start-freelancing-pakistan-2026" element={<StartFreelancingPakistan2026 />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
