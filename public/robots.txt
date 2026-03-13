@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
+
 Sitemap: https://invoicepak-pro.vercel.app/sitemap.xml
