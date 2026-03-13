@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { FileText, ArrowLeft, CheckCircle, Users, Sparkles } from 'lucide-react';
+import { FileText, ArrowLeft, CheckCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { SEO } from '@/components/SEO';
 import { useReferralTracker } from '@/hooks/useReferralTracker';
@@ -20,7 +19,11 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { signup, signInWithGoogle } = useAuth();
+  
   const navigate = useNavigate();
+  // URL se redirect parameter nikal rahe hain
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +39,8 @@ const Signup = () => {
     
     if (result.success) {
       toast.success('Account created successfully!');
-      navigate('/dashboard');
+      // Hardcoded /dashboard ki jagah redirectTo par bhej rahe hain
+      navigate(redirectTo);
     } else {
       toast.error(result.error || 'Failed to create account');
     }
@@ -51,7 +55,8 @@ const Signup = () => {
     
     if (result.success) {
       toast.success('Account created successfully!');
-      navigate('/dashboard');
+      // Yahan bhi redirectTo use kar rahe hain
+      navigate(redirectTo);
     } else {
       toast.error(result.error || 'Failed to sign up with Google');
     }
@@ -225,7 +230,7 @@ const Signup = () => {
 
               <p className="text-center text-sm text-muted-foreground">
                 Already have an account?{' '}
-                <Link to="/login" className="text-primary hover:underline font-medium">
+                <Link to={`/login${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`} className="text-primary hover:underline font-medium">
                   Sign in
                 </Link>
               </p>
