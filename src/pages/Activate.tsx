@@ -33,7 +33,7 @@ type ActivationState = 'loading' | 'success' | 'already-used' | 'expired' | 'inv
 const Activate = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthLoading } = useAuth(); // Yahan isAuthLoading add kiya hai
   const token = searchParams.get('token');
 
   const [state, setState] = useState<ActivationState>('loading');
@@ -41,6 +41,9 @@ const Activate = () => {
   const [expiryDate, setExpiryDate] = useState<Date | null>(null);
 
   useEffect(() => {
+    // Firebase ki auth state check hone tak wait karein
+    if (isAuthLoading) return;
+
     if (!token) {
       setState('invalid');
       return;
@@ -110,7 +113,7 @@ const Activate = () => {
     };
 
     activate();
-  }, [token, user, navigate]);
+  }, [token, user, navigate, isAuthLoading]); // Dependency array mein isAuthLoading add kiya
 
   if (state === 'loading' || state === 'redirecting') {
     return (
