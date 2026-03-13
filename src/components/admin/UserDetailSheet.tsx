@@ -31,6 +31,7 @@ import {
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { toast } from 'sonner';
 import type { AdminUser } from '@/types/admin';
+import { GiftProSection } from './GiftProSection';
 
 interface UserDetailSheetProps {
   user: AdminUser | null;
