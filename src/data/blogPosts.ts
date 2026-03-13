@@ -11,6 +11,16 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "9",
+    slug: "start-freelancing-pakistan-2026",
+    title: "How to Start Freelancing in Pakistan in 2026: Complete Beginner Guide",
+    summary: "Step-by-step guide to start freelancing from home in Pakistan. Learn which skills to pick, where to find clients, how to get paid, and earn $500-$3000/month.",
+    date: "2026-03-13",
+    author: "InvoicePak Team",
+    coverImage: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop",
+    content: ""
+  },
+  {
     id: "5",
     slug: "invoice-guide",
     title: "How to Create a Professional Invoice: The Ultimate Guide for Freelancers & Small Businesses (2026)",
