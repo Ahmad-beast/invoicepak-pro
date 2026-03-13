@@ -1,3 +1,4 @@
+import React from 'react';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
 import { Stats } from '@/components/landing/Stats';
@@ -15,6 +16,12 @@ import { useReferralTracker } from '@/hooks/useReferralTracker';
 
 const Landing = () => {
   useReferralTracker();
+
+  React.useEffect(() => {
+    document.documentElement.classList.add('smooth-scroll');
+    return () => document.documentElement.classList.remove('smooth-scroll');
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <SEO
