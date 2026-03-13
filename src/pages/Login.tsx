@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'; // useSearchParams add kiya
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,11 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, signInWithGoogle } = useAuth();
+  
   const navigate = useNavigate();
+  // Yahan hum URL se 'redirect' parameter nikal rahe hain
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +33,8 @@ const Login = () => {
     
     if (result.success) {
       toast.success('Welcome back!');
-      navigate('/dashboard');
+      // Hardcoded '/dashboard' ki jagah redirectTo use kiya
+      navigate(redirectTo);
     } else {
       toast.error(result.error || 'Invalid email or password');
     }
@@ -44,7 +49,8 @@ const Login = () => {
     
     if (result.success) {
       toast.success('Welcome back!');
-      navigate('/dashboard');
+      // Yahan bhi redirectTo use kiya
+      navigate(redirectTo);
     } else {
       toast.error(result.error || 'Failed to sign in with Google');
     }
@@ -188,7 +194,8 @@ const Login = () => {
 
               <p className="text-center text-sm text-muted-foreground">
                 Don't have an account?{' '}
-                <Link to="/signup" className="text-primary hover:underline font-medium">
+                {/* Note: App agar Signup se aayenge redirect link toot na jaye, isliye state me redirect pass karna better hai, but abhi simple rakhte hain */}
+                <Link to={`/signup${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`} className="text-primary hover:underline font-medium">
                   Sign up
                 </Link>
               </p>
