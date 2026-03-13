@@ -254,6 +254,11 @@ export const UserDetailSheet = ({
 
           <Separator className="bg-border/50" />
 
+          {/* Gift Pro Access */}
+          <GiftProSection userId={user.id} userEmail={user.email} />
+
+          <Separator className="bg-border/50" />
+
           {/* Danger Zone */}
           <div className="space-y-3">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-destructive flex items-center gap-2">
