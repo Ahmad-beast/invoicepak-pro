@@ -1,7 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { FileText, Menu, X, Flame } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import logo from '@/assets/logo.svg';
 
 const navLinks = [
   { href: '#features', label: 'Features', isAnchor: true },
