@@ -54,16 +54,48 @@ export const useSubscription = () => {
     const unsubscribe = onSnapshot(userRef, async (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        const now = new Date();
         
+        // Check if gifted/trial Pro has expired → revert to free
+        let currentPlan = data.plan || 'free';
+        let currentStatus = data.subscriptionStatus;
+        
+        if (currentPlan === 'pro' && data.isTrial && data.proExpiresAt) {
+          const proExpiry = data.proExpiresAt.toDate();
+          if (now >= proExpiry) {
+            // Pro gift/trial expired — revert to free in Firestore
+            currentPlan = 'free';
+            currentStatus = 'expired';
+            await updateDoc(userRef, {
+              plan: 'free',
+              subscriptionStatus: 'expired',
+              isTrial: false,
+              updatedAt: Timestamp.now(),
+            });
+          }
+        }
+
+        // Also check Lemon Squeezy subscription expiry
+        if (currentPlan === 'pro' && !data.isTrial && data.currentPeriodEnd) {
+          const periodEnd = data.currentPeriodEnd.toDate();
+          if (now >= periodEnd && currentStatus === 'cancelled') {
+            currentPlan = 'free';
+            currentStatus = 'expired';
+            await updateDoc(userRef, {
+              plan: 'free',
+              subscriptionStatus: 'expired',
+              updatedAt: Timestamp.now(),
+            });
+          }
+        }
+
         // Check if month needs reset
         const monthResetDate = data.monthResetDate?.toDate() || new Date();
-        const now = new Date();
         
         let invoiceCount = data.invoiceCountThisMonth || 0;
         let newMonthResetDate = monthResetDate;
         
         if (now >= monthResetDate) {
-          // Reset monthly count
           invoiceCount = 0;
           newMonthResetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
           
@@ -78,8 +110,8 @@ export const useSubscription = () => {
           userId: data.userId,
           email: data.email,
           lemonCustomerId: data.lemonCustomerId,
-          plan: data.plan || 'free',
-          subscriptionStatus: data.subscriptionStatus,
+          plan: currentPlan,
+          subscriptionStatus: currentStatus,
           currentPeriodEnd: data.currentPeriodEnd?.toDate() || null,
           subscriptionId: data.subscriptionId,
           variantId: data.variantId,
