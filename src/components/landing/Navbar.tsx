@@ -28,9 +28,7 @@ export const Navbar = () => {
     <nav className="sticky top-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/50">
       <div className="container mx-auto px-4 py-3.5 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center group-hover:glow-primary transition-all">
-            <Flame className="w-4.5 h-4.5 text-primary-foreground" />
-          </div>
+          <img src={logo} alt="InvoicePK Logo" className="w-9 h-9 rounded-lg group-hover:scale-105 transition-transform" />
           <span className="text-xl font-bold text-foreground">InvoicePK</span>
         </Link>
         
