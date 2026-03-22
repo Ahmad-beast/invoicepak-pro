@@ -52,86 +52,82 @@ export const useSubscription = () => {
     
     // Set up real-time listener
     const unsubscribe = onSnapshot(userRef, async (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const now = new Date();
-        
-        // Check if gifted/trial Pro has expired → revert to free
-        let currentPlan = data.plan || 'free';
-        let currentStatus = data.subscriptionStatus;
-        
-        if (currentPlan === 'pro' && data.isTrial && data.proExpiresAt) {
-          const proExpiry = data.proExpiresAt.toDate();
-          if (now >= proExpiry) {
-            // Pro gift/trial expired — revert to free in Firestore
-            currentPlan = 'free';
-            currentStatus = 'expired';
-            await updateDoc(userRef, {
-              plan: 'free',
-              subscriptionStatus: 'expired',
-              isTrial: false,
-              updatedAt: Timestamp.now(),
-            });
-          }
-        }
+      try {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const now = new Date();
 
-        // Also check Lemon Squeezy subscription expiry
-        if (currentPlan === 'pro' && !data.isTrial && data.currentPeriodEnd) {
-          const periodEnd = data.currentPeriodEnd.toDate();
-          if (now >= periodEnd && currentStatus === 'cancelled') {
-            currentPlan = 'free';
-            currentStatus = 'expired';
-            await updateDoc(userRef, {
-              plan: 'free',
-              subscriptionStatus: 'expired',
-              updatedAt: Timestamp.now(),
-            });
-          }
-        }
+          // Derive effective plan/status on client (avoid restricted writes for plan fields)
+          let effectivePlan = data.plan || 'free';
+          let effectiveStatus = data.subscriptionStatus || null;
 
-        // Check if month needs reset
-        const monthResetDate = data.monthResetDate?.toDate() || new Date();
-        
-        let invoiceCount = data.invoiceCountThisMonth || 0;
-        let newMonthResetDate = monthResetDate;
-        
-        if (now >= monthResetDate) {
-          invoiceCount = 0;
-          newMonthResetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-          
-          await updateDoc(userRef, {
-            invoiceCountThisMonth: 0,
-            monthResetDate: Timestamp.fromDate(newMonthResetDate),
+          const proExpiresAt = data.proExpiresAt?.toDate ? data.proExpiresAt.toDate() : null;
+          const trialEndDate = data.trialEndDate?.toDate ? data.trialEndDate.toDate() : null;
+          const giftExpiryDate = proExpiresAt || trialEndDate;
+
+          if (effectivePlan === 'pro' && data.isTrial && giftExpiryDate && now >= giftExpiryDate) {
+            effectivePlan = 'free';
+            effectiveStatus = 'expired';
+          }
+
+          if (effectivePlan === 'pro' && !data.isTrial && data.currentPeriodEnd?.toDate) {
+            const periodEnd = data.currentPeriodEnd.toDate();
+            const endedStatuses = ['cancelled', 'expired', 'past_due', 'unpaid'];
+            if (now >= periodEnd && endedStatuses.includes(String(effectiveStatus))) {
+              effectivePlan = 'free';
+              effectiveStatus = 'expired';
+            }
+          }
+
+          // Check if month needs reset (allowed user-owned usage fields)
+          const monthResetDate = data.monthResetDate?.toDate() || new Date();
+          let invoiceCount = data.invoiceCountThisMonth || 0;
+          let newMonthResetDate = monthResetDate;
+
+          if (now >= monthResetDate) {
+            invoiceCount = 0;
+            newMonthResetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+            try {
+              await updateDoc(userRef, {
+                invoiceCountThisMonth: 0,
+                monthResetDate: Timestamp.fromDate(newMonthResetDate),
+                updatedAt: Timestamp.now(),
+              });
+            } catch (resetError) {
+              console.error('Error resetting monthly invoice count:', resetError);
+            }
+          }
+
+          setSubscription({
+            userId: data.userId,
+            email: data.email,
+            lemonCustomerId: data.lemonCustomerId,
+            plan: effectivePlan,
+            subscriptionStatus: effectiveStatus,
+            currentPeriodEnd: data.currentPeriodEnd?.toDate() || null,
+            subscriptionId: data.subscriptionId,
+            variantId: data.variantId,
+            invoiceCountThisMonth: invoiceCount,
+            monthResetDate: newMonthResetDate,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+          });
+        } else {
+          const newSub = await initializeUserSubscription(user.uid, user.email || '');
+          await setDoc(userRef, {
+            ...newSub,
+            monthResetDate: Timestamp.fromDate(newSub.monthResetDate),
+            createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
           });
+          setSubscription(newSub);
         }
-        
-        setSubscription({
-          userId: data.userId,
-          email: data.email,
-          lemonCustomerId: data.lemonCustomerId,
-          plan: currentPlan,
-          subscriptionStatus: currentStatus,
-          currentPeriodEnd: data.currentPeriodEnd?.toDate() || null,
-          subscriptionId: data.subscriptionId,
-          variantId: data.variantId,
-          invoiceCountThisMonth: invoiceCount,
-          monthResetDate: newMonthResetDate,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        });
-      } else {
-        // Create new subscription document
-        const newSub = await initializeUserSubscription(user.uid, user.email || '');
-        await setDoc(userRef, {
-          ...newSub,
-          monthResetDate: Timestamp.fromDate(newSub.monthResetDate),
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-        });
-        setSubscription(newSub);
+      } catch (err) {
+        console.error('Error processing subscription:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }, (error) => {
       console.error('Error fetching subscription:', error);
       setLoading(false);
