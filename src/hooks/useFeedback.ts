@@ -11,15 +11,23 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import type { Feedback, FeedbackType } from '@/types/feedback';
 
 export const useFeedback = () => {
   const { user } = useAuth();
+  const { role } = useUserRole();
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFeedbacks = useCallback(async () => {
+    // Only admins can fetch all feedbacks
+    if (role !== 'admin') {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -48,7 +56,7 @@ export const useFeedback = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     fetchFeedbacks();
